@@ -21,6 +21,9 @@ VERDE_CYBER = (0, 255, 120)
 AZUL_CYBER = (0, 180, 255)
 ROJO_ALERTA = (255, 60, 60)
 AMARILLO = (255, 220, 80)
+GRIS_OSCURO = (35, 35, 45)
+GRIS_CLARO = (160, 160, 170)
+MORADO_CYBER = (180, 80, 255)
 
 
 # =========================
@@ -55,3 +58,12 @@ ALTO_ENEMIGO = 45
 PUNTOS_ENEMIGO_PEQUENO = 10
 PUNTOS_ENEMIGO_MEDIANO = 50
 PUNTOS_FINAL_BOSS = 500
+
+# =========================
+# ESTADOS DEL JUEGO
+# =========================
+
+ESTADO_MENU = "menu"
+ESTADO_JUGANDO = "jugando"
+ESTADO_PAUSA = "pausa"
+ESTADO_GAME_OVER = "game_over"
