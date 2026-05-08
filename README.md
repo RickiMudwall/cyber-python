@@ -20,7 +20,7 @@ En futuras versiones, el jugador deberá recolectar herramientas de cibersegurid
 Versión actual:
 
 ```text
-MVP 0.7
+MVP 0.8
 ```
 Funcionalidades implementadas:
 
@@ -70,7 +70,18 @@ Salir en Game Over	ESC
 - Sprites básicos para meteoritos.
 - Assets generados localmente en `assets/images/`.
 - Feedback visual de daño sobre la nave del jugador.
-- Explosión reforzada cuando el jugador pierde una vida.
+
+
+
+
+
+- Sonidos básicos generados localmente.
+- Sonido de disparo del jugador.
+- Sonido de impacto de bala.
+- Sonido de explosión.
+- Sonido de daño recibido por el jugador.
+- Sonido de Game Over.
+- Administrador de sonidos separado en `sound_manager.py`.
 
 Tecnologías utilizadas
 Python 3.9
@@ -121,7 +132,7 @@ Próximas mejoras planificadas:
 - Mejorar meteoritos con sprites y animaciones.
 Agregar enemigos medianos.
 Agregar disparos enemigos.
-Agregar sonidos y música.
+- Agregar música de fondo y mejorar efectos de sonido.
 Agregar menú inicial.
 Agregar pantalla de victoria.
 Agregar power-ups:

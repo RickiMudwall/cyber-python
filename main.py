@@ -3,6 +3,7 @@
 import pygame
 import sys
 import random
+from sound_manager import SoundManager
 
 from settings import (
     ANCHO_PANTALLA,
@@ -39,6 +40,7 @@ def main():
 
     jugador = Player()
     fondo_estrellas = StarField()
+    sonidos = SoundManager()
 
     balas = []
     enemigos = []
@@ -62,7 +64,7 @@ def main():
                 cantidad_particulas=particulas_impacto
             )
         )
-
+        sonidos.reproducir_danio()
         energia -= cantidad_danio
 
         if energia <= 0:
@@ -81,6 +83,7 @@ def main():
                 vidas = 0
                 energia = 0
                 game_over = True
+                sonidos.reproducir_game_over()
             else:
                 energia = ENERGIA_INICIAL
 
@@ -122,6 +125,7 @@ def main():
                 if evento.key == pygame.K_SPACE:
                     nueva_bala = Bullet(jugador.x, jugador.y - jugador.alto // 2)
                     balas.append(nueva_bala)
+                    sonidos.reproducir_disparo()
 
             if evento.type == EVENTO_CREAR_ENEMIGO:
                 nuevo_enemigo = Enemy()
@@ -187,11 +191,13 @@ def main():
             for bala in balas[:]:
                 for enemigo in enemigos[:]:
                     if bala.rect.colliderect(enemigo.rect):
+                        sonidos.reproducir_impacto_bala()
                         if bala in balas:
                             balas.remove(bala)
 
                         if enemigo in enemigos:
                             explosiones.append(Explosion(enemigo.x, enemigo.y))
+                            sonidos.reproducir_explosion()
                             enemigos.remove(enemigo)
 
                         puntaje += PUNTOS_ENEMIGO_PEQUENO
@@ -201,6 +207,7 @@ def main():
             for bala in balas[:]:
                 for meteorito in meteoritos[:]:
                     if bala.rect.colliderect(meteorito.rect):
+                        sonidos.reproducir_impacto_bala()
                         if bala in balas:
                             balas.remove(bala)
 
@@ -214,6 +221,7 @@ def main():
                                     cantidad_particulas=25
                                 )
                             )
+                            sonidos.reproducir_explosion()
                             meteoritos.remove(meteorito)
                             puntaje += 15
 
