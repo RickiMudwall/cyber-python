@@ -23,6 +23,7 @@ from bullet import Bullet
 from enemy import Enemy
 from enemy_bullet import EnemyBullet
 from meteor import Meteor
+from explosion import Explosion
 from starfield import StarField
 
 
@@ -43,6 +44,7 @@ def main():
     enemigos = []
     balas_enemigas = []
     meteoritos = []
+    explosiones = []
 
     puntaje = 0
     vidas = VIDAS_INICIALES
@@ -71,6 +73,7 @@ def main():
                         enemigos = []
                         balas_enemigas = []
                         meteoritos = []
+                        explosiones = []
                         puntaje = 0
                         vidas = VIDAS_INICIALES
                         energia = ENERGIA_INICIAL
@@ -110,7 +113,6 @@ def main():
 
         if not game_over:
             teclas = pygame.key.get_pressed()
-
             jugador.mover(teclas)
 
             # Actualizar balas del jugador
@@ -141,6 +143,13 @@ def main():
                 if meteorito.esta_fuera_de_pantalla():
                     meteoritos.remove(meteorito)
 
+            # Actualizar explosiones
+            for explosion in explosiones[:]:
+                explosion.actualizar()
+
+                if explosion.finalizada():
+                    explosiones.remove(explosion)
+
             # Colisión bala del jugador contra enemigo
             for bala in balas[:]:
                 for enemigo in enemigos[:]:
@@ -149,6 +158,7 @@ def main():
                             balas.remove(bala)
 
                         if enemigo in enemigos:
+                            explosiones.append(Explosion(enemigo.x, enemigo.y))
                             enemigos.remove(enemigo)
 
                         puntaje += PUNTOS_ENEMIGO_PEQUENO
@@ -164,6 +174,13 @@ def main():
                         meteorito_destruido = meteorito.recibir_impacto()
 
                         if meteorito_destruido and meteorito in meteoritos:
+                            explosiones.append(
+                                Explosion(
+                                    meteorito.x,
+                                    meteorito.y,
+                                    cantidad_particulas=25
+                                )
+                            )
                             meteoritos.remove(meteorito)
                             puntaje += 15
 
@@ -172,6 +189,7 @@ def main():
             # Colisión enemigo contra jugador
             for enemigo in enemigos[:]:
                 if enemigo.rect.colliderect(jugador.rect):
+                    explosiones.append(Explosion(enemigo.x, enemigo.y))
                     enemigos.remove(enemigo)
                     energia -= 20
 
@@ -202,6 +220,13 @@ def main():
             # Colisión meteorito contra jugador
             for meteorito in meteoritos[:]:
                 if meteorito.rect.colliderect(jugador.rect):
+                    explosiones.append(
+                        Explosion(
+                            meteorito.x,
+                            meteorito.y,
+                            cantidad_particulas=25
+                        )
+                    )
                     meteoritos.remove(meteorito)
                     energia -= 30
 
@@ -219,7 +244,7 @@ def main():
         fondo_estrellas.actualizar()
         fondo_estrellas.dibujar(pantalla)
 
-        texto_titulo = fuente.render("Cyber Python - MVP 0.5", True, VERDE_CYBER)
+        texto_titulo = fuente.render("Cyber Python - MVP 0.6", True, VERDE_CYBER)
         texto_puntaje = fuente.render(f"Puntaje: {puntaje}", True, BLANCO)
         texto_vidas = fuente.render(f"Vidas: {vidas}", True, BLANCO)
         texto_energia = fuente.render(f"Energia: {energia}", True, BLANCO)
@@ -240,6 +265,9 @@ def main():
 
         for meteorito in meteoritos:
             meteorito.dibujar(pantalla)
+
+        for explosion in explosiones:
+            explosion.dibujar(pantalla)
 
         jugador.dibujar(pantalla)
 

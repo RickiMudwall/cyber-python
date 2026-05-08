@@ -20,7 +20,7 @@ En futuras versiones, el jugador deberá recolectar herramientas de cibersegurid
 Versión actual:
 
 ```text
-MVP 0.5
+MVP 0.6
 ```
 Funcionalidades implementadas:
 
@@ -57,6 +57,11 @@ Salir en Game Over	ESC
 - Meteoritos destructibles con disparos del jugador.
 - Daño al jugador por colisión con meteoritos.
 - Puntaje adicional al destruir meteoritos.
+
+- Explosiones simples por partículas.
+- Efectos visuales al destruir enemigos.
+- Efectos visuales al destruir meteoritos.
+- Explosiones al impactar enemigos o meteoritos contra el jugador.
 
 Tecnologías utilizadas
 Python 3.9
@@ -107,7 +112,7 @@ Próximas mejoras planificadas:
 - Mejorar meteoritos con sprites y animaciones.
 Agregar enemigos medianos.
 Agregar disparos enemigos.
-Agregar efectos de explosión.
+- Mejorar explosiones con sprites animados y sonido.
 Agregar sonidos y música.
 Agregar menú inicial.
 Agregar pantalla de victoria.
