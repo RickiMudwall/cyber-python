@@ -80,9 +80,11 @@ Crear entorno virtual:
 python3 -m venv .venv
 source .venv/bin/activate
 
+
 Instalar dependencias:
 
-pip install pygame-ce
+
+pip install -r requirements.txt
 
 Ejecutar el juego:
 
