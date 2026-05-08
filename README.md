@@ -20,7 +20,7 @@ En futuras versiones, el jugador deberá recolectar herramientas de cibersegurid
 Versión actual:
 
 ```text
-MVP 0.4
+MVP 0.5
 ```
 Funcionalidades implementadas:
 
@@ -52,7 +52,11 @@ Reiniciar en Game Over	R
 Salir en Game Over	ESC
 
 > Los enemigos disparan automáticamente amenazas digitales que reducen la energía del jugador.
-
+- Meteoritos que aparecen desde la parte superior.
+- Meteoritos con resistencia de 3 impactos.
+- Meteoritos destructibles con disparos del jugador.
+- Daño al jugador por colisión con meteoritos.
+- Puntaje adicional al destruir meteoritos.
 
 Tecnologías utilizadas
 Python 3.9
@@ -100,7 +104,7 @@ Roadmap
 
 Próximas mejoras planificadas:
 
-Agregar meteoritos.
+- Mejorar meteoritos con sprites y animaciones.
 Agregar enemigos medianos.
 Agregar disparos enemigos.
 Agregar efectos de explosión.
