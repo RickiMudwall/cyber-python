@@ -51,6 +51,39 @@ def main():
     energia = ENERGIA_INICIAL
     game_over = False
 
+    def aplicar_danio_al_jugador(cantidad_danio, particulas_impacto=18):
+        nonlocal energia, vidas, game_over
+
+        # Explosión pequeña en la nave al recibir impacto
+        explosiones.append(
+            Explosion(
+                jugador.x,
+                jugador.y,
+                cantidad_particulas=particulas_impacto
+            )
+        )
+
+        energia -= cantidad_danio
+
+        if energia <= 0:
+            vidas -= 1
+
+            # Explosión más fuerte cuando se pierde una vida
+            explosiones.append(
+                Explosion(
+                    jugador.x,
+                    jugador.y,
+                    cantidad_particulas=45
+                )
+            )
+
+            if vidas <= 0:
+                vidas = 0
+                energia = 0
+                game_over = True
+            else:
+                energia = ENERGIA_INICIAL
+
     EVENTO_CREAR_ENEMIGO = pygame.USEREVENT + 1
     EVENTO_DISPARO_ENEMIGO = pygame.USEREVENT + 2
     EVENTO_CREAR_METEORITO = pygame.USEREVENT + 3
@@ -191,31 +224,13 @@ def main():
                 if enemigo.rect.colliderect(jugador.rect):
                     explosiones.append(Explosion(enemigo.x, enemigo.y))
                     enemigos.remove(enemigo)
-                    energia -= 20
-
-                    if energia <= 0:
-                        vidas -= 1
-                        energia = ENERGIA_INICIAL
-
-                        if vidas <= 0:
-                            vidas = 0
-                            energia = 0
-                            game_over = True
+                    aplicar_danio_al_jugador(20, particulas_impacto=20)
 
             # Colisión bala enemiga contra jugador
             for bala_enemiga in balas_enemigas[:]:
                 if bala_enemiga.rect.colliderect(jugador.rect):
                     balas_enemigas.remove(bala_enemiga)
-                    energia -= 10
-
-                    if energia <= 0:
-                        vidas -= 1
-                        energia = ENERGIA_INICIAL
-
-                        if vidas <= 0:
-                            vidas = 0
-                            energia = 0
-                            game_over = True
+                    aplicar_danio_al_jugador(10, particulas_impacto=14)
 
             # Colisión meteorito contra jugador
             for meteorito in meteoritos[:]:
@@ -228,16 +243,7 @@ def main():
                         )
                     )
                     meteoritos.remove(meteorito)
-                    energia -= 30
-
-                    if energia <= 0:
-                        vidas -= 1
-                        energia = ENERGIA_INICIAL
-
-                        if vidas <= 0:
-                            vidas = 0
-                            energia = 0
-                            game_over = True
+                    aplicar_danio_al_jugador(30, particulas_impacto=30)
 
         pantalla.fill(NEGRO)
 

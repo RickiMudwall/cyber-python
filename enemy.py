@@ -1,5 +1,6 @@
 # enemy.py
 
+import os
 import random
 import pygame
 
@@ -9,8 +10,6 @@ from settings import (
     ANCHO_ENEMIGO,
     ALTO_ENEMIGO,
     VELOCIDAD_ENEMIGO,
-    ROJO_ALERTA,
-    BLANCO,
 )
 
 
@@ -24,12 +23,18 @@ class Enemy:
         self.x = random.randint(self.ancho, ANCHO_PANTALLA - self.ancho)
         self.y = -self.alto
 
-        self.rect = pygame.Rect(
-            self.x - self.ancho // 2,
-            self.y - self.alto // 2,
-            self.ancho,
-            self.alto
+        # Cargar sprite enemigo
+        ruta_imagen = os.path.join("assets", "images", "enemy_ship.png")
+        imagen_original = pygame.image.load(ruta_imagen).convert_alpha()
+
+        self.imagen = pygame.transform.scale(
+            imagen_original,
+            (self.ancho, self.alto)
         )
+
+        # Rectángulo de colisión
+        self.rect = self.imagen.get_rect()
+        self.rect.center = (self.x, self.y)
 
     def actualizar(self):
         # El enemigo baja hacia el jugador
@@ -37,25 +42,7 @@ class Enemy:
         self.rect.center = (self.x, self.y)
 
     def dibujar(self, pantalla):
-        # Nave enemiga estilo arcade simple
-
-        punta_abajo = (self.x, self.y + self.alto // 2)
-        izquierda = (self.x - self.ancho // 2, self.y - self.alto // 2)
-        derecha = (self.x + self.ancho // 2, self.y - self.alto // 2)
-
-        pygame.draw.polygon(
-            pantalla,
-            ROJO_ALERTA,
-            [punta_abajo, izquierda, derecha]
-        )
-
-        # Detalle visual central
-        pygame.draw.circle(
-            pantalla,
-            BLANCO,
-            (self.x, self.y),
-            5
-        )
+        pantalla.blit(self.imagen, self.rect)
 
     def esta_fuera_de_pantalla(self):
         return self.y > ALTO_PANTALLA + self.alto

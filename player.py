@@ -1,5 +1,6 @@
 # player.py
 
+import os
 import pygame
 
 from settings import (
@@ -8,9 +9,6 @@ from settings import (
     ANCHO_JUGADOR,
     ALTO_JUGADOR,
     VELOCIDAD_JUGADOR,
-    VERDE_CYBER,
-    AZUL_CYBER,
-    BLANCO,
 )
 
 
@@ -24,16 +22,20 @@ class Player:
         self.alto = ALTO_JUGADOR
         self.velocidad = VELOCIDAD_JUGADOR
 
-        # Rectángulo de colisión
-        self.rect = pygame.Rect(
-            self.x - self.ancho // 2,
-            self.y - self.alto // 2,
-            self.ancho,
-            self.alto
+        # Cargar sprite de la nave
+        ruta_imagen = os.path.join("assets", "images", "player_ship.png")
+        imagen_original = pygame.image.load(ruta_imagen).convert_alpha()
+
+        self.imagen = pygame.transform.scale(
+            imagen_original,
+            (self.ancho, self.alto)
         )
 
+        # Rectángulo de colisión
+        self.rect = self.imagen.get_rect()
+        self.rect.center = (self.x, self.y)
+
     def mover(self, teclas):
-        # Movimiento izquierda/derecha/arriba/abajo
         if teclas[pygame.K_LEFT]:
             self.x -= self.velocidad
 
@@ -62,36 +64,7 @@ class Player:
         if self.y > ALTO_PANTALLA - mitad_alto:
             self.y = ALTO_PANTALLA - mitad_alto
 
-        # Actualizar rectángulo de colisión
         self.rect.center = (self.x, self.y)
 
     def dibujar(self, pantalla):
-        # Nave estilo arcade usando polígonos simples
-
-        punta = (self.x, self.y - self.alto // 2)
-        izquierda = (self.x - self.ancho // 2, self.y + self.alto // 2)
-        derecha = (self.x + self.ancho // 2, self.y + self.alto // 2)
-
-        # Cuerpo principal
-        pygame.draw.polygon(
-            pantalla,
-            VERDE_CYBER,
-            [punta, izquierda, derecha]
-        )
-
-        # Cabina
-        pygame.draw.circle(
-            pantalla,
-            AZUL_CYBER,
-            (self.x, self.y),
-            8
-        )
-
-        # Detalle central
-        pygame.draw.line(
-            pantalla,
-            BLANCO,
-            (self.x, self.y - 20),
-            (self.x, self.y + 20),
-            2
-        )
+        pantalla.blit(self.imagen, self.rect)
