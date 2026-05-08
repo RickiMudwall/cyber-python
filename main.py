@@ -2,6 +2,7 @@
 
 import pygame
 import sys
+import random
 
 from settings import (
     ANCHO_PANTALLA,
@@ -20,6 +21,7 @@ from settings import (
 from player import Player
 from bullet import Bullet
 from enemy import Enemy
+from enemy_bullet import EnemyBullet
 from starfield import StarField
 
 
@@ -38,6 +40,7 @@ def main():
 
     balas = []
     enemigos = []
+    balas_enemigas = []
 
     puntaje = 0
     vidas = VIDAS_INICIALES
@@ -45,7 +48,10 @@ def main():
     game_over = False
 
     EVENTO_CREAR_ENEMIGO = pygame.USEREVENT + 1
+    EVENTO_DISPARO_ENEMIGO = pygame.USEREVENT + 2
+
     pygame.time.set_timer(EVENTO_CREAR_ENEMIGO, 1200)
+    pygame.time.set_timer(EVENTO_DISPARO_ENEMIGO, 900)
 
     while True:
         for evento in pygame.event.get():
@@ -59,6 +65,7 @@ def main():
                         jugador = Player()
                         balas = []
                         enemigos = []
+                        balas_enemigas = []
                         puntaje = 0
                         vidas = VIDAS_INICIALES
                         energia = ENERGIA_INICIAL
@@ -79,24 +86,46 @@ def main():
                 nuevo_enemigo = Enemy()
                 enemigos.append(nuevo_enemigo)
 
+            if evento.type == EVENTO_DISPARO_ENEMIGO:
+                if len(enemigos) > 0:
+                    enemigo_que_dispara = random.choice(enemigos)
+                    tipo_amenaza = random.choice(["malware", "bug", "alert"])
+
+                    nueva_bala_enemiga = EnemyBullet(
+                        enemigo_que_dispara.x,
+                        enemigo_que_dispara.y + enemigo_que_dispara.alto // 2,
+                        tipo_amenaza
+                    )
+
+                    balas_enemigas.append(nueva_bala_enemiga)
+
         if not game_over:
             teclas = pygame.key.get_pressed()
 
             jugador.mover(teclas)
 
+            # Actualizar balas del jugador
             for bala in balas[:]:
                 bala.actualizar()
 
                 if bala.esta_fuera_de_pantalla():
                     balas.remove(bala)
 
+            # Actualizar enemigos
             for enemigo in enemigos[:]:
                 enemigo.actualizar()
 
                 if enemigo.esta_fuera_de_pantalla():
                     enemigos.remove(enemigo)
 
-            # Colisión bala contra enemigo
+            # Actualizar balas enemigas
+            for bala_enemiga in balas_enemigas[:]:
+                bala_enemiga.actualizar()
+
+                if bala_enemiga.esta_fuera_de_pantalla():
+                    balas_enemigas.remove(bala_enemiga)
+
+            # Colisión bala del jugador contra enemigo
             for bala in balas[:]:
                 for enemigo in enemigos[:]:
                     if bala.rect.colliderect(enemigo.rect):
@@ -124,12 +153,27 @@ def main():
                             energia = 0
                             game_over = True
 
+            # Colisión bala enemiga contra jugador
+            for bala_enemiga in balas_enemigas[:]:
+                if bala_enemiga.rect.colliderect(jugador.rect):
+                    balas_enemigas.remove(bala_enemiga)
+                    energia -= 10
+
+                    if energia <= 0:
+                        vidas -= 1
+                        energia = ENERGIA_INICIAL
+
+                        if vidas <= 0:
+                            vidas = 0
+                            energia = 0
+                            game_over = True
+
         pantalla.fill(NEGRO)
 
         fondo_estrellas.actualizar()
         fondo_estrellas.dibujar(pantalla)
 
-        texto_titulo = fuente.render("Cyber Python - MVP 0.3", True, VERDE_CYBER)
+        texto_titulo = fuente.render("Cyber Python - MVP 0.4", True, VERDE_CYBER)
         texto_puntaje = fuente.render(f"Puntaje: {puntaje}", True, BLANCO)
         texto_vidas = fuente.render(f"Vidas: {vidas}", True, BLANCO)
         texto_energia = fuente.render(f"Energia: {energia}", True, BLANCO)
@@ -144,6 +188,9 @@ def main():
 
         for enemigo in enemigos:
             enemigo.dibujar(pantalla)
+
+        for bala_enemiga in balas_enemigas:
+            bala_enemiga.dibujar(pantalla)
 
         jugador.dibujar(pantalla)
 
