@@ -1,12 +1,9 @@
 # enemy_bullet.py
 
+import os
 import pygame
 
-from settings import (
-    ALTO_PANTALLA,
-    ROJO_ALERTA,
-    AMARILLO,
-)
+from settings import ALTO_PANTALLA
 
 
 class EnemyBullet:
@@ -15,42 +12,37 @@ class EnemyBullet:
         self.y = y
         self.tipo = tipo
 
-        self.ancho = 10
-        self.alto = 18
+        self.ancho = 22
+        self.alto = 30
         self.velocidad = 4
 
-        self.rect = pygame.Rect(
-            self.x - self.ancho // 2,
-            self.y,
-            self.ancho,
-            self.alto
+        # Seleccionar sprite según tipo de amenaza
+        if self.tipo == "malware":
+            nombre_imagen = "malware_bullet.png"
+        elif self.tipo == "bug":
+            nombre_imagen = "bug_bullet.png"
+        else:
+            nombre_imagen = "alert_bullet.png"
+
+        ruta_imagen = os.path.join("assets", "images", nombre_imagen)
+        imagen_original = pygame.image.load(ruta_imagen).convert_alpha()
+
+        self.imagen = pygame.transform.scale(
+            imagen_original,
+            (self.ancho, self.alto)
         )
+
+        # Rectángulo de colisión
+        self.rect = self.imagen.get_rect()
+        self.rect.center = (self.x, self.y)
 
     def actualizar(self):
         # El disparo enemigo baja hacia el jugador
         self.y += self.velocidad
-        self.rect.y = self.y
+        self.rect.center = (self.x, self.y)
 
     def dibujar(self, pantalla):
-        if self.tipo == "malware":
-            color = ROJO_ALERTA
-        elif self.tipo == "bug":
-            color = AMARILLO
-        else:
-            color = (180, 80, 255)
-
-        # Proyectil enemigo simple
-        pygame.draw.rect(
-            pantalla,
-            color,
-            self.rect,
-            border_radius=4
-        )
-
-        # Texto pequeño para reforzar la temática
-        fuente = pygame.font.SysFont(None, 14)
-        texto = fuente.render(self.tipo, True, (255, 255, 255))
-        pantalla.blit(texto, (self.rect.x - 8, self.rect.y - 10))
+        pantalla.blit(self.imagen, self.rect)
 
     def esta_fuera_de_pantalla(self):
         return self.y > ALTO_PANTALLA + self.alto

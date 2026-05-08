@@ -20,7 +20,7 @@ En futuras versiones, el jugador deberá recolectar herramientas de cibersegurid
 Versión actual:
 
 ```text
-MVP 0.6
+MVP 0.7
 ```
 Funcionalidades implementadas:
 
@@ -62,6 +62,15 @@ Salir en Game Over	ESC
 - Efectos visuales al destruir enemigos.
 - Efectos visuales al destruir meteoritos.
 - Explosiones al impactar enemigos o meteoritos contra el jugador.
+
+- Sprites básicos para la nave del jugador.
+- Sprites básicos para naves enemigas.
+- Sprites básicos para balas del jugador.
+- Sprites básicos para proyectiles enemigos.
+- Sprites básicos para meteoritos.
+- Assets generados localmente en `assets/images/`.
+- Feedback visual de daño sobre la nave del jugador.
+- Explosión reforzada cuando el jugador pierde una vida.
 
 Tecnologías utilizadas
 Python 3.9
@@ -108,11 +117,10 @@ python3 main.py
 Roadmap
 
 Próximas mejoras planificadas:
-
+- Mejorar explosiones con sprites animados y sonido.
 - Mejorar meteoritos con sprites y animaciones.
 Agregar enemigos medianos.
 Agregar disparos enemigos.
-- Mejorar explosiones con sprites animados y sonido.
 Agregar sonidos y música.
 Agregar menú inicial.
 Agregar pantalla de victoria.
