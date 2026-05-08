@@ -1,0 +1,19 @@
+# Entorno virtual
+.venv/
+venv/
+
+# PyCharm
+.idea/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Sistema operativo
+.DS_Store
+
+# Builds futuros
+dist/
+build/
+*.spec
