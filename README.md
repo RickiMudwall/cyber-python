@@ -20,7 +20,7 @@ En futuras versiones, el jugador deberá recolectar herramientas de cibersegurid
 Versión actual:
 
 ```text
-MVP 0.8
+MVP 0.9
 ```
 Funcionalidades implementadas:
 
@@ -50,6 +50,17 @@ Movimiento diagonal	Combinación de flechas
 Disparar	Spacebar
 Reiniciar en Game Over	R
 Salir en Game Over	ESC
+
+| Acción | Tecla |
+|---|---|
+| Mover nave con teclado | Flechas direccionales |
+| Activar/desactivar control con mouse | M |
+| Disparar | Spacebar |
+| Pausar / continuar | P |
+| Seleccionar opción de menú | Enter |
+| Mover selección de menú | Flecha arriba / Flecha abajo |
+| Reiniciar en Game Over | R |
+| Salir | ESC |
 
 > Los enemigos disparan automáticamente amenazas digitales que reducen la energía del jugador.
 - Meteoritos que aparecen desde la parte superior.
@@ -82,6 +93,15 @@ Salir en Game Over	ESC
 - Sonido de daño recibido por el jugador.
 - Sonido de Game Over.
 - Administrador de sonidos separado en `sound_manager.py`.
+
+
+- Menú inicial con opciones Start y Salir.
+- Sistema de pausa con la tecla P.
+- Menú de pausa con opciones Continuar, Reiniciar y Salir.
+- Retorno al menú inicial desde Game Over.
+- Control alternativo con mouse.
+- Cambio de modo de control con la tecla M.
+- Visualización del modo de control actual en pantalla.
 
 Tecnologías utilizadas
 Python 3.9
@@ -133,7 +153,7 @@ Próximas mejoras planificadas:
 Agregar enemigos medianos.
 Agregar disparos enemigos.
 - Agregar música de fondo y mejorar efectos de sonido.
-Agregar menú inicial.
+- Mejorar diseño visual del menú inicial.
 Agregar pantalla de victoria.
 Agregar power-ups:
 Escáner

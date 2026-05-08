@@ -66,5 +66,26 @@ class Player:
 
         self.rect.center = (self.x, self.y)
 
+    def mover_con_mouse(self, posicion_mouse):
+        self.x, self.y = posicion_mouse
+
+        # Limitar movimiento dentro de la pantalla
+        mitad_ancho = self.ancho // 2
+        mitad_alto = self.alto // 2
+
+        if self.x < mitad_ancho:
+            self.x = mitad_ancho
+
+        if self.x > ANCHO_PANTALLA - mitad_ancho:
+            self.x = ANCHO_PANTALLA - mitad_ancho
+
+        if self.y < mitad_alto:
+            self.y = mitad_alto
+
+        if self.y > ALTO_PANTALLA - mitad_alto:
+            self.y = ALTO_PANTALLA - mitad_alto
+
+        self.rect.center = (self.x, self.y)
+
     def dibujar(self, pantalla):
         pantalla.blit(self.imagen, self.rect)
