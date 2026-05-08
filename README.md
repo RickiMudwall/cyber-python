@@ -20,7 +20,7 @@ En futuras versiones, el jugador deberá recolectar herramientas de cibersegurid
 Versión actual:
 
 ```text
-MVP 0.3
+MVP 0.4
 ```
 Funcionalidades implementadas:
 
@@ -30,6 +30,9 @@ Movimiento horizontal, vertical y diagonal.
 Fondo espacial animado.
 Disparo con barra espaciadora.
 Enemigos que aparecen desde la parte superior.
+- Enemigos que disparan proyectiles hacia el jugador.
+- Proyectiles enemigos con temática de amenazas digitales: malware, bug y alert.
+- Daño al jugador por impacto de proyectiles enemigos.
 Colisiones entre balas y enemigos.
 Sistema de puntaje.
 Sistema de energía.
@@ -47,6 +50,10 @@ Movimiento diagonal	Combinación de flechas
 Disparar	Spacebar
 Reiniciar en Game Over	R
 Salir en Game Over	ESC
+
+> Los enemigos disparan automáticamente amenazas digitales que reducen la energía del jugador.
+
+
 Tecnologías utilizadas
 Python 3.9
 Pygame CE
