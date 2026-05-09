@@ -41,8 +41,8 @@ class Meteor:
     def dibujar(self, pantalla):
         pantalla.blit(self.imagen, self.rect)
 
-    def recibir_impacto(self):
-        self.vida -= 1
+    def recibir_impacto(self, danio=1):
+        self.vida -= danio
         return self.vida <= 0
 
     def esta_fuera_de_pantalla(self):

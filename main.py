@@ -3,6 +3,10 @@
 import pygame
 import sys
 import random
+from powerup import PowerUp
+from ally_ship import AllyShip
+
+from scanner_effect import ScannerEffect
 
 from settings import (
     ANCHO_PANTALLA,
@@ -20,6 +24,12 @@ from settings import (
     ESTADO_JUGANDO,
     ESTADO_PAUSA,
     ESTADO_GAME_OVER,
+    MUNICION_ARMA_PODEROSA_POR_POWERUP,
+    CADENCIA_ARMA_NORMAL_MS,
+    CADENCIA_ARMA_PODEROSA_MS,
+    DANIO_BALA_NORMAL,
+    DANIO_BALA_PODEROSA,
+    CANTIDAD_ALIADOS,
 )
 
 from player import Player
@@ -31,6 +41,7 @@ from explosion import Explosion
 from starfield import StarField
 from sound_manager import SoundManager
 from ui import dibujar_menu_inicio, dibujar_menu_pausa
+from power_bullet import PowerBullet
 
 
 def main():
@@ -60,21 +71,45 @@ def main():
     meteoritos = []
     explosiones = []
 
+    powerups = []
+    scanner_effects = []
+    aliados = []
+    aliados_usan_weapon = False
+
+    tiene_scanner = False
+    tiene_weapon = False
+    tiene_allies = False
+
+    scanner_activo = False
+    weapon_activo = False
+    allies_activo = False
+    municion_weapon = 0
+
     puntaje = 0
     vidas = VIDAS_INICIALES
     energia = ENERGIA_INICIAL
+    ultimo_disparo_ms = 0
 
     EVENTO_CREAR_ENEMIGO = pygame.USEREVENT + 1
     EVENTO_DISPARO_ENEMIGO = pygame.USEREVENT + 2
     EVENTO_CREAR_METEORITO = pygame.USEREVENT + 3
+    EVENTO_CREAR_POWERUP = pygame.USEREVENT + 4
 
     pygame.time.set_timer(EVENTO_CREAR_ENEMIGO, 1200)
     pygame.time.set_timer(EVENTO_DISPARO_ENEMIGO, 900)
     pygame.time.set_timer(EVENTO_CREAR_METEORITO, 1800)
+    pygame.time.set_timer(EVENTO_CREAR_POWERUP, 9000)
 
     def reiniciar_partida():
         nonlocal jugador, balas, enemigos, balas_enemigas, meteoritos
         nonlocal explosiones, puntaje, vidas, energia
+        nonlocal powerups
+        nonlocal tiene_scanner, tiene_allies, municion_weapon
+        nonlocal scanner_activo, weapon_activo, allies_activo
+        nonlocal scanner_effects
+        nonlocal ultimo_disparo_ms
+        nonlocal aliados
+        nonlocal aliados_usan_weapon
 
         jugador = Player()
         balas = []
@@ -82,10 +117,23 @@ def main():
         balas_enemigas = []
         meteoritos = []
         explosiones = []
+        powerups = []
+        scanner_effects = []
+        aliados = []
+        aliados_usan_weapon = False
 
         puntaje = 0
         vidas = VIDAS_INICIALES
         energia = ENERGIA_INICIAL
+        ultimo_disparo_ms = 0
+
+        tiene_scanner = False
+        tiene_allies = False
+        municion_weapon = 0
+
+        scanner_activo = False
+        weapon_activo = False
+        allies_activo = False
 
     def aplicar_danio_al_jugador(cantidad_danio, particulas_impacto=18):
         nonlocal energia, vidas, estado
@@ -135,12 +183,24 @@ def main():
         modo_control = "Mouse" if control_mouse else "Teclado"
         texto_control = fuente.render(f"M: Control {modo_control}", True, BLANCO)
 
+        estado_scanner = "ON" if scanner_activo else ("OK" if tiene_scanner else "--")
+        estado_weapon = f"ON {municion_weapon}" if weapon_activo else (
+            f"AMMO {municion_weapon}" if municion_weapon > 0 else "--")
+        estado_allies = "ON" if allies_activo else ("OK" if tiene_allies else "--")
+
+        texto_powerups = fuente.render(
+            f"1 Scanner: {estado_scanner} | 2 Arma: {estado_weapon} | 3 Aliados: {estado_allies}",
+            True,
+            BLANCO
+        )
+
         pantalla.blit(texto_titulo, (20, 20))
         pantalla.blit(texto_puntaje, (20, 50))
         pantalla.blit(texto_vidas, (20, 80))
         pantalla.blit(texto_energia, (20, 110))
         pantalla.blit(texto_pausa, (ANCHO_PANTALLA - 120, 20))
         pantalla.blit(texto_control, (ANCHO_PANTALLA - 210, 50))
+        pantalla.blit(texto_powerups, (20, 140))
 
 
         for bala in balas:
@@ -155,8 +215,17 @@ def main():
         for meteorito in meteoritos:
             meteorito.dibujar(pantalla)
 
+        for powerup in powerups:
+            powerup.dibujar(pantalla)
+
         for explosion in explosiones:
             explosion.dibujar(pantalla)
+
+        for scanner_effect in scanner_effects:
+            scanner_effect.dibujar(pantalla)
+
+        for aliado in aliados:
+            aliado.dibujar(pantalla)
 
         jugador.dibujar(pantalla)
 
@@ -196,9 +265,34 @@ def main():
                 # =========================
                 elif estado == ESTADO_JUGANDO:
                     if evento.key == pygame.K_SPACE:
-                        nueva_bala = Bullet(jugador.x, jugador.y - jugador.alto // 2)
-                        balas.append(nueva_bala)
-                        sonidos.reproducir_disparo()
+                        tiempo_actual = pygame.time.get_ticks()
+
+                        if weapon_activo:
+                            cadencia_actual = CADENCIA_ARMA_PODEROSA_MS
+                        else:
+                            cadencia_actual = CADENCIA_ARMA_NORMAL_MS
+
+                        puede_disparar = tiempo_actual - ultimo_disparo_ms >= cadencia_actual
+
+                        if puede_disparar:
+                            if weapon_activo and municion_weapon > 0:
+                                nueva_bala = PowerBullet(jugador.x, jugador.y - jugador.alto // 2)
+                                balas.append(nueva_bala)
+
+                                municion_weapon -= 1
+                                ultimo_disparo_ms = tiempo_actual
+                                sonidos.reproducir_disparo()
+
+                                if municion_weapon <= 0:
+                                    municion_weapon = 0
+                                    weapon_activo = False
+
+                            else:
+                                nueva_bala = Bullet(jugador.x, jugador.y - jugador.alto // 2)
+                                balas.append(nueva_bala)
+
+                                ultimo_disparo_ms = tiempo_actual
+                                sonidos.reproducir_disparo()
 
                     elif evento.key == pygame.K_m:
                         control_mouse = not control_mouse
@@ -207,6 +301,41 @@ def main():
                             pygame.mouse.set_visible(False)
                         else:
                             pygame.mouse.set_visible(True)
+
+                    elif evento.key == pygame.K_1 and tiene_scanner:
+                        # Scanner es de un solo uso: se consume al activarlo
+                        tiene_scanner = False
+
+                        scanner_activo = True
+
+                        # Importante:
+                        # No apagamos weapon_activo.
+                        # El arma poderosa queda activa si el jugador la tenía seleccionada.
+                        scanner_effects = [
+                            ScannerEffect(jugador.x, jugador.y)
+                        ]
+
+                    elif evento.key == pygame.K_2 and municion_weapon > 0:
+                        # El arma poderosa se activa/desactiva solo por decisión del jugador
+                        weapon_activo = not weapon_activo
+
+                    elif evento.key == pygame.K_3 and tiene_allies:
+                        # Aliados es de un solo uso: se consume al activarlo
+                        tiene_allies = False
+
+                        # Si el arma poderosa está activa y hay más de 500 municiones,
+                        # las naves aliadas heredan el disparo poderoso.
+                        aliados_usan_weapon = weapon_activo and municion_weapon > 500
+
+                        allies_activo = True
+
+                        # Importante:
+                        # No apagamos weapon_activo.
+                        # Tu nave mantiene el arma grande seleccionada.
+                        aliados = [
+                            AllyShip(indice, CANTIDAD_ALIADOS)
+                            for indice in range(CANTIDAD_ALIADOS)
+                        ]
 
                     elif evento.key == pygame.K_p:
                         estado = ESTADO_PAUSA
@@ -285,6 +414,11 @@ def main():
                     nuevo_meteorito = Meteor()
                     meteoritos.append(nuevo_meteorito)
 
+                if evento.type == EVENTO_CREAR_POWERUP:
+                    tipo_powerup = random.choice(["scanner", "weapon", "allies"])
+                    nuevo_powerup = PowerUp(tipo_powerup)
+                    powerups.append(nuevo_powerup)
+
         # =========================
         # ACTUALIZACIÓN DEL JUEGO
         # =========================
@@ -322,11 +456,49 @@ def main():
                 if meteorito.esta_fuera_de_pantalla():
                     meteoritos.remove(meteorito)
 
+            for powerup in powerups[:]:
+                powerup.actualizar()
+
+                if powerup.esta_fuera_de_pantalla():
+                    powerups.remove(powerup)
+
             for explosion in explosiones[:]:
                 explosion.actualizar()
 
                 if explosion.finalizada():
                     explosiones.remove(explosion)
+
+            for scanner_effect in scanner_effects[:]:
+                scanner_effect.actualizar()
+
+                if scanner_effect.finalizado():
+                    scanner_effects.remove(scanner_effect)
+                    scanner_activo = False
+
+            for aliado in aliados[:]:
+                aliado.actualizar()
+
+                if aliado.puede_disparar():
+                    x_disparo, y_disparo = aliado.obtener_posicion_disparo()
+
+                    if aliados_usan_weapon and municion_weapon > 0:
+                        nueva_bala = PowerBullet(x_disparo, y_disparo)
+                        municion_weapon -= 1
+
+                        if municion_weapon <= 0:
+                            municion_weapon = 0
+                            aliados_usan_weapon = False
+                    else:
+                        nueva_bala = Bullet(x_disparo, y_disparo)
+
+                    balas.append(nueva_bala)
+
+                if aliado.finalizado():
+                    aliados.remove(aliado)
+
+            if allies_activo and len(aliados) == 0:
+                allies_activo = False
+                aliados_usan_weapon = False
 
             # Colisión bala del jugador contra enemigo
             for bala in balas[:]:
@@ -354,7 +526,8 @@ def main():
                         if bala in balas:
                             balas.remove(bala)
 
-                        meteorito_destruido = meteorito.recibir_impacto()
+                        danio_bala = getattr(bala, "danio", DANIO_BALA_NORMAL)
+                        meteorito_destruido = meteorito.recibir_impacto(danio_bala)
 
                         if meteorito_destruido and meteorito in meteoritos:
                             explosiones.append(
@@ -397,6 +570,25 @@ def main():
                     sonidos.reproducir_explosion()
                     meteoritos.remove(meteorito)
                     aplicar_danio_al_jugador(30, particulas_impacto=30)
+
+            # Colisión power-up contra jugador
+            for powerup in powerups[:]:
+                if powerup.rect.colliderect(jugador.rect):
+                    if powerup.tipo == "scanner":
+                        # Scanner no es acumulativo
+                        if not tiene_scanner and not scanner_activo:
+                            tiene_scanner = True
+
+                    elif powerup.tipo == "weapon":
+                        # Arma poderosa sí es acumulativa
+                        municion_weapon += MUNICION_ARMA_PODEROSA_POR_POWERUP
+
+                    elif powerup.tipo == "allies":
+                        # Aliados no es acumulativo
+                        if not tiene_allies and not allies_activo:
+                            tiene_allies = True
+
+                    powerups.remove(powerup)
 
         # =========================
         # DIBUJO EN PANTALLA
