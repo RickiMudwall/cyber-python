@@ -1,27 +1,27 @@
-# bullet.py
+# power_bullet.py
 
 import os
 import pygame
 
 from settings import (
-    VELOCIDAD_BALA,
-    ANCHO_BALA,
-    ALTO_BALA,
-    DANIO_BALA_NORMAL,
+    ANCHO_BALA_PODEROSA,
+    ALTO_BALA_PODEROSA,
+    VELOCIDAD_BALA_PODEROSA,
+    DANIO_BALA_PODEROSA,
 )
 
 
-class Bullet:
+class PowerBullet:
     def __init__(self, x, y):
         self.x = x
         self.y = y
 
-        self.ancho = ANCHO_BALA
-        self.alto = ALTO_BALA
-        self.velocidad = VELOCIDAD_BALA
-        self.danio = DANIO_BALA_NORMAL
+        self.ancho = ANCHO_BALA_PODEROSA
+        self.alto = ALTO_BALA_PODEROSA
+        self.velocidad = VELOCIDAD_BALA_PODEROSA
+        self.danio = DANIO_BALA_PODEROSA
 
-        # Cargar sprite de la bala del jugador
+        # Usaremos el mismo sprite base de la bala, pero escalado más grande
         ruta_imagen = os.path.join("assets", "images", "player_bullet.png")
         imagen_original = pygame.image.load(ruta_imagen).convert_alpha()
 
@@ -30,12 +30,10 @@ class Bullet:
             (self.ancho, self.alto)
         )
 
-        # Rectángulo de colisión
         self.rect = self.imagen.get_rect()
         self.rect.center = (self.x, self.y)
 
     def actualizar(self):
-        # La bala avanza hacia arriba
         self.y -= self.velocidad
         self.rect.center = (self.x, self.y)
 

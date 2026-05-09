@@ -20,7 +20,7 @@ En futuras versiones, el jugador deberá recolectar herramientas de cibersegurid
 Versión actual:
 
 ```text
-MVP 0.9
+MVP 1.0
 ```
 Funcionalidades implementadas:
 
@@ -62,6 +62,11 @@ Salir en Game Over	ESC
 | Reiniciar en Game Over | R |
 | Salir | ESC |
 
+| Activar Scanner | 1 |
+| Activar/desactivar arma poderosa | 2 |
+| Llamar naves aliadas | 3 |
+
+
 > Los enemigos disparan automáticamente amenazas digitales que reducen la energía del jugador.
 - Meteoritos que aparecen desde la parte superior.
 - Meteoritos con resistencia de 3 impactos.
@@ -102,6 +107,22 @@ Salir en Game Over	ESC
 - Control alternativo con mouse.
 - Cambio de modo de control con la tecla M.
 - Visualización del modo de control actual en pantalla.
+
+
+
+- Sistema base de power-ups.
+- Power-up Scanner de un solo uso.
+- Efecto visual de escáner con onda expansiva circular.
+- Power-up Arma poderosa con munición acumulable.
+- Cada power-up de arma poderosa entrega 100 unidades de munición.
+- Disparo poderoso con proyectil más grande y menor cadencia.
+- El arma poderosa permanece activa hasta desactivarla con la tecla 2 o agotar munición.
+- Power-up de llamada a naves aliadas.
+- Las naves aliadas aparecen con trayectorias parabólicas aleatorias.
+- Las naves aliadas disparan durante 5 segundos.
+- Las naves aliadas se retiran con trayectorias parabólicas.
+- Las naves aliadas heredan el arma poderosa si está activa y hay más de 500 municiones.
+- Scanner y Aliados son consumibles de un solo uso.
 
 Tecnologías utilizadas
 Python 3.9
@@ -155,10 +176,9 @@ Agregar disparos enemigos.
 - Agregar música de fondo y mejorar efectos de sonido.
 - Mejorar diseño visual del menú inicial.
 Agregar pantalla de victoria.
-Agregar power-ups:
-Escáner
-Arma poderosa
-Llamada a naves aliadas
+- Mejorar balance de power-ups.
+- Agregar efectos visuales avanzados para Scanner, Arma poderosa y Aliados.
+- Preparar lógica del Final Boss usando la secuencia Scanner → Arma poderosa → Aliados.
 Agregar Final Boss.
 Empaquetar como ejecutable.
 Publicar versión jugable en navegador con GitHub Pages.

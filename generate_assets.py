@@ -89,6 +89,65 @@ def crear_meteorito():
     guardar_superficie("meteor.png", superficie)
 
 
+def crear_powerup_scanner():
+    superficie = pygame.Surface((48, 48), pygame.SRCALPHA)
+
+    verde = (0, 255, 120)
+    azul = (0, 180, 255)
+    blanco = (255, 255, 255)
+
+    pygame.draw.circle(superficie, azul, (24, 24), 20, 3)
+    pygame.draw.circle(superficie, verde, (24, 24), 9, 2)
+    pygame.draw.line(superficie, blanco, (24, 24), (38, 14), 3)
+
+    fuente = pygame.font.SysFont(None, 16)
+    texto = fuente.render("SCAN", True, verde)
+    superficie.blit(texto, (8, 34))
+
+    guardar_superficie("powerup_scanner.png", superficie)
+
+
+def crear_powerup_arma():
+    superficie = pygame.Surface((48, 48), pygame.SRCALPHA)
+
+    amarillo = (255, 220, 80)
+    rojo = (255, 60, 60)
+    blanco = (255, 255, 255)
+
+    pygame.draw.rect(superficie, amarillo, (14, 10, 20, 28), border_radius=5)
+    pygame.draw.polygon(superficie, rojo, [(24, 2), (17, 14), (31, 14)])
+    pygame.draw.line(superficie, blanco, (24, 14), (24, 36), 3)
+
+    fuente = pygame.font.SysFont(None, 16)
+    texto = fuente.render("GUN", True, blanco)
+    superficie.blit(texto, (11, 34))
+
+    guardar_superficie("powerup_weapon.png", superficie)
+
+
+def crear_powerup_aliados():
+    superficie = pygame.Surface((48, 48), pygame.SRCALPHA)
+
+    morado = (180, 80, 255)
+    verde = (0, 255, 120)
+    blanco = (255, 255, 255)
+
+    # Tres mini naves aliadas
+    pygame.draw.polygon(superficie, verde, [(24, 6), (14, 26), (24, 20), (34, 26)])
+    pygame.draw.polygon(superficie, morado, [(12, 18), (4, 36), (12, 31), (20, 36)])
+    pygame.draw.polygon(superficie, morado, [(36, 18), (28, 36), (36, 31), (44, 36)])
+
+    pygame.draw.circle(superficie, blanco, (24, 18), 3)
+    pygame.draw.circle(superficie, blanco, (12, 30), 2)
+    pygame.draw.circle(superficie, blanco, (36, 30), 2)
+
+    fuente = pygame.font.SysFont(None, 15)
+    texto = fuente.render("TEAM", True, blanco)
+    superficie.blit(texto, (8, 36))
+
+    guardar_superficie("powerup_allies.png", superficie)
+
+
 def main():
     crear_nave_jugador()
     crear_nave_enemiga()
@@ -99,6 +158,10 @@ def main():
     crear_bala_enemiga("alert_bullet.png", (180, 80, 255))
 
     crear_meteorito()
+
+    crear_powerup_scanner()
+    crear_powerup_arma()
+    crear_powerup_aliados()
 
     pygame.quit()
 
