@@ -192,6 +192,41 @@ def crear_final_boss():
 
     guardar_superficie("final_boss.png", superficie)
 
+def crear_boss_missile():
+    superficie = pygame.Surface((28, 48), pygame.SRCALPHA)
+
+    rojo = (255, 60, 60)
+    amarillo = (255, 220, 80)
+    blanco = (255, 255, 255)
+    gris = (80, 80, 90)
+
+    # Cuerpo del misil
+    pygame.draw.polygon(
+        superficie,
+        rojo,
+        [(14, 2), (4, 18), (7, 40), (21, 40), (24, 18)]
+    )
+
+    # Centro del misil
+    pygame.draw.rect(
+        superficie,
+        gris,
+        (9, 16, 10, 20),
+        border_radius=4
+    )
+
+    # Punta brillante
+    pygame.draw.circle(superficie, blanco, (14, 10), 4)
+
+    # Llamas inferiores
+    pygame.draw.polygon(
+        superficie,
+        amarillo,
+        [(8, 40), (14, 48), (20, 40)]
+    )
+
+    guardar_superficie("boss_missile.png", superficie)
+
 def main():
     crear_nave_jugador()
     crear_nave_enemiga()
@@ -207,6 +242,7 @@ def main():
     crear_powerup_arma()
     crear_powerup_aliados()
     crear_final_boss()
+    crear_boss_missile()
 
     pygame.quit()
 

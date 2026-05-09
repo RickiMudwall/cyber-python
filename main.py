@@ -6,6 +6,7 @@ import random
 from powerup import PowerUp
 from ally_ship import AllyShip
 from final_boss import FinalBoss
+from boss_missile import BossMissile
 
 from scanner_effect import ScannerEffect
 
@@ -76,9 +77,11 @@ def main():
     powerups = []
     scanner_effects = []
     aliados = []
+    boss_missiles = []
     final_boss = None
     fase_boss_activa = False
     aliados_usan_weapon = False
+
 
 
     tiene_scanner = False
@@ -99,11 +102,13 @@ def main():
     EVENTO_DISPARO_ENEMIGO = pygame.USEREVENT + 2
     EVENTO_CREAR_METEORITO = pygame.USEREVENT + 3
     EVENTO_CREAR_POWERUP = pygame.USEREVENT + 4
+    EVENTO_DISPARO_BOSS = pygame.USEREVENT + 5
 
     pygame.time.set_timer(EVENTO_CREAR_ENEMIGO, 1200)
     pygame.time.set_timer(EVENTO_DISPARO_ENEMIGO, 900)
     pygame.time.set_timer(EVENTO_CREAR_METEORITO, 1800)
-    pygame.time.set_timer(EVENTO_CREAR_POWERUP, 9000)
+    pygame.time.set_timer(EVENTO_CREAR_POWERUP, 3000)
+    pygame.time.set_timer(EVENTO_DISPARO_BOSS, 1700)
 
     def reiniciar_partida():
         nonlocal jugador, balas, enemigos, balas_enemigas, meteoritos
@@ -116,6 +121,7 @@ def main():
         nonlocal aliados
         nonlocal aliados_usan_weapon
         nonlocal final_boss, fase_boss_activa
+        nonlocal boss_missiles
 
         jugador = Player()
         balas = []
@@ -126,6 +132,7 @@ def main():
         powerups = []
         scanner_effects = []
         aliados = []
+        boss_missiles = []
         aliados_usan_weapon = False
 
         puntaje = 0
@@ -237,6 +244,9 @@ def main():
 
         if final_boss is not None:
             final_boss.dibujar(pantalla)
+
+        for misil in boss_missiles:
+            misil.dibujar(pantalla)
 
         jugador.dibujar(pantalla)
 
@@ -450,6 +460,19 @@ def main():
                     nuevo_powerup = PowerUp(tipo_powerup)
                     powerups.append(nuevo_powerup)
 
+                if (
+                        evento.type == EVENTO_DISPARO_BOSS
+                        and fase_boss_activa
+                        and final_boss is not None
+                        and not final_boss.esta_destruido()
+                ):
+                    nuevo_misil = BossMissile(
+                        final_boss.x,
+                        final_boss.y + final_boss.alto // 2,
+                        jugador
+                    )
+                    boss_missiles.append(nuevo_misil)
+
         # =========================
         # ACTUALIZACIÓN DEL JUEGO
         # =========================
@@ -477,7 +500,14 @@ def main():
             if final_boss is not None:
                 final_boss.actualizar()
 
+            for misil in boss_missiles[:]:
+                misil.actualizar()
+
+                if misil.esta_fuera_de_pantalla():
+                    boss_missiles.remove(misil)
+
             if final_boss is not None and final_boss.esta_destruido():
+                boss_missiles = []
                 estado = ESTADO_VICTORIA
                 pygame.mouse.set_visible(True)
 
@@ -610,6 +640,45 @@ def main():
                         if bala in balas:
                             balas.remove(bala)
 
+            # Colisión bala del jugador contra misil del Boss
+            for bala in balas[:]:
+                for misil in boss_missiles[:]:
+                    if bala.rect.colliderect(misil.rect):
+                        sonidos.reproducir_impacto_bala()
+
+                        danio_bala = getattr(bala, "danio", DANIO_BALA_NORMAL)
+                        misil_destruido = misil.recibir_impacto(danio_bala)
+
+                        if bala in balas:
+                            balas.remove(bala)
+
+                        if misil_destruido and misil in boss_missiles:
+                            explosiones.append(
+                                Explosion(
+                                    misil.x,
+                                    misil.y,
+                                    cantidad_particulas=18
+                                )
+                            )
+                            sonidos.reproducir_explosion()
+                            boss_missiles.remove(misil)
+
+                        break
+
+            # Colisión misil del Boss contra jugador
+            for misil in boss_missiles[:]:
+                if misil.rect.colliderect(jugador.rect):
+                    explosiones.append(
+                        Explosion(
+                            misil.x,
+                            misil.y,
+                            cantidad_particulas=24
+                        )
+                    )
+                    sonidos.reproducir_explosion()
+
+                    boss_missiles.remove(misil)
+                    aplicar_danio_al_jugador(25, particulas_impacto=24)
 
 
             # Colisión enemigo contra jugador
