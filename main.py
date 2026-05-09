@@ -5,6 +5,7 @@ import sys
 import random
 from powerup import PowerUp
 from ally_ship import AllyShip
+from final_boss import FinalBoss
 
 from scanner_effect import ScannerEffect
 
@@ -24,6 +25,7 @@ from settings import (
     ESTADO_JUGANDO,
     ESTADO_PAUSA,
     ESTADO_GAME_OVER,
+    ESTADO_VICTORIA,
     MUNICION_ARMA_PODEROSA_POR_POWERUP,
     CADENCIA_ARMA_NORMAL_MS,
     CADENCIA_ARMA_PODEROSA_MS,
@@ -74,7 +76,10 @@ def main():
     powerups = []
     scanner_effects = []
     aliados = []
+    final_boss = None
+    fase_boss_activa = False
     aliados_usan_weapon = False
+
 
     tiene_scanner = False
     tiene_weapon = False
@@ -110,6 +115,7 @@ def main():
         nonlocal ultimo_disparo_ms
         nonlocal aliados
         nonlocal aliados_usan_weapon
+        nonlocal final_boss, fase_boss_activa
 
         jugador = Player()
         balas = []
@@ -134,6 +140,8 @@ def main():
         scanner_activo = False
         weapon_activo = False
         allies_activo = False
+        final_boss = None
+        fase_boss_activa = False
 
     def aplicar_danio_al_jugador(cantidad_danio, particulas_impacto=18):
         nonlocal energia, vidas, estado
@@ -227,6 +235,9 @@ def main():
         for aliado in aliados:
             aliado.dibujar(pantalla)
 
+        if final_boss is not None:
+            final_boss.dibujar(pantalla)
+
         jugador.dibujar(pantalla)
 
     while True:
@@ -308,16 +319,18 @@ def main():
 
                         scanner_activo = True
 
-                        # Importante:
-                        # No apagamos weapon_activo.
-                        # El arma poderosa queda activa si el jugador la tenía seleccionada.
                         scanner_effects = [
                             ScannerEffect(jugador.x, jugador.y)
                         ]
 
+                        # Si el Final Boss ya está activo, el scanner lo marca como escaneado
+                        if fase_boss_activa and final_boss is not None:
+                            final_boss.marcar_escaneado()
+
                     elif evento.key == pygame.K_2 and municion_weapon > 0:
                         # El arma poderosa se activa/desactiva solo por decisión del jugador
                         weapon_activo = not weapon_activo
+
 
                     elif evento.key == pygame.K_3 and tiene_allies:
                         # Aliados es de un solo uso: se consume al activarlo
@@ -329,13 +342,22 @@ def main():
 
                         allies_activo = True
 
-                        # Importante:
-                        # No apagamos weapon_activo.
-                        # Tu nave mantiene el arma grande seleccionada.
                         aliados = [
                             AllyShip(indice, CANTIDAD_ALIADOS)
                             for indice in range(CANTIDAD_ALIADOS)
                         ]
+
+                        # Secuencia especial contra el Final Boss:
+                        # Scanner aplicado + arma poderosa activa + llamada a aliados.
+                        if (
+                                fase_boss_activa
+                                and final_boss is not None
+                                and final_boss.escaneado
+                                and weapon_activo
+                                and municion_weapon > 0
+                        ):
+                            final_boss.iniciar_ataque_masivo()
+
 
                     elif evento.key == pygame.K_p:
                         estado = ESTADO_PAUSA
@@ -391,13 +413,22 @@ def main():
                         estado = ESTADO_MENU
                         pygame.mouse.set_visible(True)
 
+                elif estado == ESTADO_VICTORIA:
+                    if evento.key == pygame.K_RETURN:
+                        reiniciar_partida()
+                        estado = ESTADO_MENU
+
+                    elif evento.key == pygame.K_ESCAPE:
+                        pygame.quit()
+                        sys.exit()
+
             # Eventos automáticos solo mientras se juega
             if estado == ESTADO_JUGANDO:
-                if evento.type == EVENTO_CREAR_ENEMIGO:
+                if evento.type == EVENTO_CREAR_ENEMIGO and not fase_boss_activa:
                     nuevo_enemigo = Enemy()
                     enemigos.append(nuevo_enemigo)
 
-                if evento.type == EVENTO_DISPARO_ENEMIGO:
+                if evento.type == EVENTO_DISPARO_ENEMIGO and not fase_boss_activa:
                     if len(enemigos) > 0:
                         enemigo_que_dispara = random.choice(enemigos)
                         tipo_amenaza = random.choice(["malware", "bug", "alert"])
@@ -410,7 +441,7 @@ def main():
 
                         balas_enemigas.append(nueva_bala_enemiga)
 
-                if evento.type == EVENTO_CREAR_METEORITO:
+                if evento.type == EVENTO_CREAR_METEORITO and not fase_boss_activa:
                     nuevo_meteorito = Meteor()
                     meteoritos.append(nuevo_meteorito)
 
@@ -425,6 +456,30 @@ def main():
 
         if estado == ESTADO_JUGANDO:
             teclas = pygame.key.get_pressed()
+
+            # Activar fase Final Boss cuando se cumplen los requisitos
+            if (
+                    not fase_boss_activa
+                    and tiene_scanner
+                    and tiene_allies
+                    and municion_weapon > 700
+            ):
+                fase_boss_activa = True
+                final_boss = FinalBoss()
+
+                # Limpiar campo para iniciar fase Boss
+                enemigos = []
+                meteoritos = []
+                balas_enemigas = []
+                powerups = []
+
+            # Actualizar Final Boss
+            if final_boss is not None:
+                final_boss.actualizar()
+
+            if final_boss is not None and final_boss.esta_destruido():
+                estado = ESTADO_VICTORIA
+                pygame.mouse.set_visible(True)
 
             if control_mouse:
                 posicion_mouse = pygame.mouse.get_pos()
@@ -543,6 +598,20 @@ def main():
 
                         break
 
+            # Colisión bala del jugador contra Final Boss
+            if final_boss is not None and not final_boss.esta_destruido():
+                for bala in balas[:]:
+                    if bala.rect.colliderect(final_boss.rect):
+                        sonidos.reproducir_impacto_bala()
+
+                        danio_bala = getattr(bala, "danio", DANIO_BALA_NORMAL)
+                        final_boss.recibir_danio_minimo(danio_bala)
+
+                        if bala in balas:
+                            balas.remove(bala)
+
+
+
             # Colisión enemigo contra jugador
             for enemigo in enemigos[:]:
                 if enemigo.rect.colliderect(jugador.rect):
@@ -615,6 +684,19 @@ def main():
             pantalla.blit(texto_game_over, (230, 230))
             pantalla.blit(texto_reinicio, (270, 310))
             pantalla.blit(texto_menu, (230, 345))
+            pantalla.blit(texto_salir, (290, 380))
+
+        elif estado == ESTADO_VICTORIA:
+            pantalla.fill(NEGRO)
+
+            texto_victoria = fuente_grande.render("YOU WIN!", True, VERDE_CYBER)
+            texto_mensaje = fuente.render("Has derrotado al Final Boss", True, BLANCO)
+            texto_menu = fuente.render("Presiona ENTER para volver al menu inicial", True, BLANCO)
+            texto_salir = fuente.render("Presiona ESC para salir", True, BLANCO)
+
+            pantalla.blit(texto_victoria, (250, 220))
+            pantalla.blit(texto_mensaje, (250, 300))
+            pantalla.blit(texto_menu, (190, 340))
             pantalla.blit(texto_salir, (290, 380))
 
         pygame.display.flip()
