@@ -20,7 +20,7 @@ En futuras versiones, el jugador deberá recolectar herramientas de cibersegurid
 Versión actual:
 
 ```text
-MVP 1.0
+MVP 1.1
 ```
 Funcionalidades implementadas:
 
@@ -124,6 +124,20 @@ Salir en Game Over	ESC
 - Las naves aliadas heredan el arma poderosa si está activa y hay más de 500 municiones.
 - Scanner y Aliados son consumibles de un solo uso.
 
+
+- Final Boss con sprite propio.
+- Aparición del Final Boss al tener Scanner, Aliados y más de 700 municiones de arma poderosa.
+- Al aparecer el Final Boss se detienen enemigos normales, meteoritos y power-ups.
+- Final Boss con barra de vida.
+- Final Boss con movimiento lateral.
+- El Scanner marca al Final Boss como escaneado.
+- El Final Boss recibe daño mínimo con disparos normales o poderosos.
+- Secuencia especial de victoria: Scanner → Arma poderosa → Aliados.
+- Ataque masivo que destruye al Final Boss después de 5 segundos.
+- Pantalla de victoria `YOU WIN!`.
+- Retorno al menú inicial desde la pantalla de victoria.
+
+
 Tecnologías utilizadas
 Python 3.9
 Pygame CE
@@ -166,6 +180,8 @@ pip install -r requirements.txt
 Ejecutar el juego:
 
 python3 main.py
+
+
 Roadmap
 
 Próximas mejoras planificadas:
@@ -178,7 +194,10 @@ Agregar disparos enemigos.
 Agregar pantalla de victoria.
 - Mejorar balance de power-ups.
 - Agregar efectos visuales avanzados para Scanner, Arma poderosa y Aliados.
-- Preparar lógica del Final Boss usando la secuencia Scanner → Arma poderosa → Aliados.
+-- Mejorar ataques del Final Boss con misiles teledirigidos destructibles.
+- Mejorar estética visual del Final Boss.
+- Agregar música de victoria.
+- Balancear dificultad del combate final.
 Agregar Final Boss.
 Empaquetar como ejecutable.
 Publicar versión jugable en navegador con GitHub Pages.

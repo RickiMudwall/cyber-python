@@ -67,6 +67,7 @@ ESTADO_MENU = "menu"
 ESTADO_JUGANDO = "jugando"
 ESTADO_PAUSA = "pausa"
 ESTADO_GAME_OVER = "game_over"
+ESTADO_VICTORIA = "victoria"
 
 # =========================
 # POWER-UPS

@@ -147,6 +147,50 @@ def crear_powerup_aliados():
 
     guardar_superficie("powerup_allies.png", superficie)
 
+def crear_final_boss():
+    superficie = pygame.Surface((160, 120), pygame.SRCALPHA)
+
+    rojo = (255, 60, 60)
+    morado = (180, 80, 255)
+    azul = (0, 180, 255)
+    blanco = (255, 255, 255)
+    gris = (60, 60, 70)
+
+    # Cuerpo principal
+    pygame.draw.polygon(
+        superficie,
+        morado,
+        [
+            (80, 8),
+            (18, 45),
+            (35, 108),
+            (80, 88),
+            (125, 108),
+            (142, 45),
+        ]
+    )
+
+    # Núcleo central
+    pygame.draw.circle(superficie, rojo, (80, 58), 24)
+    pygame.draw.circle(superficie, blanco, (80, 58), 10)
+
+    # Alas laterales
+    pygame.draw.polygon(superficie, gris, [(18, 45), (0, 75), (35, 108)])
+    pygame.draw.polygon(superficie, gris, [(142, 45), (160, 75), (125, 108)])
+
+    # Luces / puntos de energía
+    pygame.draw.circle(superficie, azul, (48, 55), 7)
+    pygame.draw.circle(superficie, azul, (112, 55), 7)
+
+    # Detalles inferiores
+    pygame.draw.rect(superficie, rojo, (55, 90, 12, 22), border_radius=4)
+    pygame.draw.rect(superficie, rojo, (93, 90, 12, 22), border_radius=4)
+
+    fuente = pygame.font.SysFont(None, 18)
+    texto = fuente.render("BOSS", True, blanco)
+    superficie.blit(texto, (63, 12))
+
+    guardar_superficie("final_boss.png", superficie)
 
 def main():
     crear_nave_jugador()
@@ -162,6 +206,7 @@ def main():
     crear_powerup_scanner()
     crear_powerup_arma()
     crear_powerup_aliados()
+    crear_final_boss()
 
     pygame.quit()
 
