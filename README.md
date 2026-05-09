@@ -20,7 +20,7 @@ En futuras versiones, el jugador deberá recolectar herramientas de cibersegurid
 Versión actual:
 
 ```text
-MVP 1.1
+MVP 1.2
 ```
 Funcionalidades implementadas:
 
@@ -137,6 +137,13 @@ Salir en Game Over	ESC
 - Pantalla de victoria `YOU WIN!`.
 - Retorno al menú inicial desde la pantalla de victoria.
 
+- Misiles teledirigidos del Final Boss.
+- Los misiles persiguen la posición actual de la nave del jugador.
+- Los misiles pueden ser destruidos con disparos.
+- Los misiles reciben más daño con arma poderosa.
+- Los misiles causan daño al jugador si impactan.
+- Los misiles desaparecen al derrotar al Final Boss.
+
 
 Tecnologías utilizadas
 Python 3.9
@@ -194,7 +201,8 @@ Agregar disparos enemigos.
 Agregar pantalla de victoria.
 - Mejorar balance de power-ups.
 - Agregar efectos visuales avanzados para Scanner, Arma poderosa y Aliados.
--- Mejorar ataques del Final Boss con misiles teledirigidos destructibles.
+- Balancear frecuencia, velocidad y daño de los misiles del Final Boss.
+- Agregar nuevos patrones de ataque del Final Boss.
 - Mejorar estética visual del Final Boss.
 - Agregar música de victoria.
 - Balancear dificultad del combate final.
