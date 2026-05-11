@@ -109,19 +109,20 @@ class FinalBoss:
             self.derrotado = True
             self.ataque_masivo_activo = False
 
-    def dibujar(self, pantalla):
-        if self.derrotado:
+    def dibujar(self, pantalla, mostrar_destruido=False):
+        if self.derrotado and not mostrar_destruido:
             return
 
         pantalla.blit(self.imagen, self.rect)
 
-        if self.escaneado:
-            self.dibujar_estado_escaneado(pantalla)
+        if not self.derrotado:
+            if self.escaneado:
+                self.dibujar_estado_escaneado(pantalla)
 
-        if self.ataque_masivo_activo:
-            self.dibujar_ataque_masivo(pantalla)
+            if self.ataque_masivo_activo:
+                self.dibujar_ataque_masivo(pantalla)
 
-        self.dibujar_barra_vida(pantalla)
+            self.dibujar_barra_vida(pantalla)
 
     def dibujar_estado_escaneado(self, pantalla):
         # Aura visual indicando que el Boss fue escaneado
