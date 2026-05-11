@@ -18,6 +18,7 @@ from settings import (
     NEGRO,
     VERDE_CYBER,
     BLANCO,
+    AZUL_CYBER,
     ROJO_ALERTA,
     PUNTOS_ENEMIGO_PEQUENO,
     VIDAS_INICIALES,
@@ -27,17 +28,35 @@ from settings import (
     ESTADO_PAUSA,
     ESTADO_GAME_OVER,
     ESTADO_VICTORIA,
+    ESTADO_INTRO,
+    DURACION_INTRO_ESPERA_MS,
+    DURACION_INTRO_DESPEGUE_MS,
+    VELOCIDAD_SCROLL_DESPEGUE,
     MUNICION_ARMA_PODEROSA_POR_POWERUP,
     CADENCIA_ARMA_NORMAL_MS,
     CADENCIA_ARMA_PODEROSA_MS,
     DANIO_BALA_NORMAL,
     DANIO_BALA_PODEROSA,
     CANTIDAD_ALIADOS,
+    INTERVALO_OLEADAS_MS,
+    OLEADAS_ANTES_TORMENTA_METEORITOS,
+    TOTAL_METEORITOS_TORMENTA,
+    INTERVALO_METEORITOS_TORMENTA_MS,
+    DURACION_EXPLOSIONES_FINAL_BOSS_MS,
+    INTERVALO_EXPLOSIONES_FINAL_BOSS_MS,
+    RETRASO_TRANSICION_VICTORIA_MS,
+    INTRO_DIALOGO_SLIDE_MS,
+    INTRO_DIALOGO_HOLD_MS,
+    INTRO_DIALOGO_ANCHO,
+    INTRO_DIALOGO_ALTO,
+    INTRO_DIALOGO_MARGEN_LATERAL,
+    INTRO_DIALOGO_MARGEN_SUPERIOR,
 )
 
 from player import Player
 from bullet import Bullet
 from enemy import Enemy
+from enemy_wave import EnemyWave
 from enemy_bullet import EnemyBullet
 from meteor import Meteor
 from explosion import Explosion
@@ -50,7 +69,10 @@ from power_bullet import PowerBullet
 def main():
     pygame.init()
 
-    pantalla = pygame.display.set_mode((ANCHO_PANTALLA, ALTO_PANTALLA))
+    pantalla = pygame.display.set_mode(
+        (ANCHO_PANTALLA, ALTO_PANTALLA),
+        pygame.FULLSCREEN | pygame.SCALED
+    )
     pygame.display.set_caption(TITULO_JUEGO)
 
     reloj = pygame.time.Clock()
@@ -64,7 +86,8 @@ def main():
     estado = ESTADO_MENU
     opcion_menu_inicio = 0
     opcion_menu_pausa = 0
-    control_mouse = False
+    tiempo_inicio_intro = 0
+    control_mouse = True
 
     # Variables de partida
     jugador = Player()
@@ -80,7 +103,15 @@ def main():
     boss_missiles = []
     final_boss = None
     fase_boss_activa = False
+    derrota_boss_en_proceso = False
+    tiempo_inicio_derrota_boss = 0
+    ultimo_explosion_boss = 0
+    posicion_boss_derrotado = (0, 0)
+
     aliados_usan_weapon = False
+    oleadas_generadas_ciclo = 0
+    tormenta_meteoritos_activa = False
+    meteoritos_tormenta_generados = 0
 
 
 
@@ -104,9 +135,9 @@ def main():
     EVENTO_CREAR_POWERUP = pygame.USEREVENT + 4
     EVENTO_DISPARO_BOSS = pygame.USEREVENT + 5
 
-    pygame.time.set_timer(EVENTO_CREAR_ENEMIGO, 1200)
+    pygame.time.set_timer(EVENTO_CREAR_ENEMIGO, INTERVALO_OLEADAS_MS)
     pygame.time.set_timer(EVENTO_DISPARO_ENEMIGO, 900)
-    pygame.time.set_timer(EVENTO_CREAR_METEORITO, 1800)
+    pygame.time.set_timer(EVENTO_CREAR_METEORITO, INTERVALO_METEORITOS_TORMENTA_MS)
     pygame.time.set_timer(EVENTO_CREAR_POWERUP, 3000)
     pygame.time.set_timer(EVENTO_DISPARO_BOSS, 1700)
 
@@ -122,6 +153,13 @@ def main():
         nonlocal aliados_usan_weapon
         nonlocal final_boss, fase_boss_activa
         nonlocal boss_missiles
+        nonlocal oleadas_generadas_ciclo
+        nonlocal tormenta_meteoritos_activa
+        nonlocal meteoritos_tormenta_generados
+        nonlocal derrota_boss_en_proceso
+        nonlocal tiempo_inicio_derrota_boss
+        nonlocal ultimo_explosion_boss
+        nonlocal posicion_boss_derrotado
 
         jugador = Player()
         balas = []
@@ -149,6 +187,15 @@ def main():
         allies_activo = False
         final_boss = None
         fase_boss_activa = False
+
+        oleadas_generadas_ciclo = 0
+        tormenta_meteoritos_activa = False
+        meteoritos_tormenta_generados = 0
+
+        derrota_boss_en_proceso = False
+        tiempo_inicio_derrota_boss = 0
+        ultimo_explosion_boss = 0
+        posicion_boss_derrotado = (0, 0)
 
     def aplicar_danio_al_jugador(cantidad_danio, particulas_impacto=18):
         nonlocal energia, vidas, estado
@@ -184,6 +231,344 @@ def main():
             else:
                 energia = ENERGIA_INICIAL
 
+    def intentar_disparar():
+        nonlocal municion_weapon, weapon_activo, ultimo_disparo_ms
+
+        tiempo_actual = pygame.time.get_ticks()
+
+        if weapon_activo:
+            cadencia_actual = CADENCIA_ARMA_PODEROSA_MS
+        else:
+            cadencia_actual = CADENCIA_ARMA_NORMAL_MS
+
+        puede_disparar = tiempo_actual - ultimo_disparo_ms >= cadencia_actual
+
+        if not puede_disparar:
+            return
+
+        if weapon_activo and municion_weapon > 0:
+            nueva_bala = PowerBullet(jugador.x, jugador.y - jugador.alto // 2)
+            balas.append(nueva_bala)
+
+            municion_weapon -= 1
+            ultimo_disparo_ms = tiempo_actual
+            sonidos.reproducir_disparo()
+
+            if municion_weapon <= 0:
+                municion_weapon = 0
+                weapon_activo = False
+
+        else:
+            nueva_bala = Bullet(jugador.x, jugador.y - jugador.alto // 2)
+            balas.append(nueva_bala)
+
+            ultimo_disparo_ms = tiempo_actual
+            sonidos.reproducir_disparo()
+
+    def suavizar_movimiento(progreso):
+        """
+        Suaviza el movimiento de entrada y salida del cuadro.
+        Evita que el movimiento se vea robótico.
+        """
+        return progreso * progreso * (3 - 2 * progreso)
+
+    def dibujar_cuadro_dialogo_intro(lado, texto, tiempo_local):
+        duracion_total = (
+                INTRO_DIALOGO_SLIDE_MS
+                + INTRO_DIALOGO_HOLD_MS
+                + INTRO_DIALOGO_SLIDE_MS
+        )
+
+        if tiempo_local < 0 or tiempo_local > duracion_total:
+            return
+
+        ancho = INTRO_DIALOGO_ANCHO
+        alto = INTRO_DIALOGO_ALTO
+        y = INTRO_DIALOGO_MARGEN_SUPERIOR
+
+        if lado == "izquierda":
+            x_fuera = -ancho - 40
+            x_destino = INTRO_DIALOGO_MARGEN_LATERAL
+        else:
+            x_fuera = ANCHO_PANTALLA + 40
+            x_destino = ANCHO_PANTALLA - ancho - INTRO_DIALOGO_MARGEN_LATERAL
+
+        # Fase de entrada
+        if tiempo_local <= INTRO_DIALOGO_SLIDE_MS:
+            progreso = tiempo_local / INTRO_DIALOGO_SLIDE_MS
+            progreso = suavizar_movimiento(progreso)
+            x = x_fuera + (x_destino - x_fuera) * progreso
+
+        # Fase quieta
+        elif tiempo_local <= INTRO_DIALOGO_SLIDE_MS + INTRO_DIALOGO_HOLD_MS:
+            x = x_destino
+
+        # Fase de salida
+        else:
+            tiempo_salida = tiempo_local - INTRO_DIALOGO_SLIDE_MS - INTRO_DIALOGO_HOLD_MS
+            progreso = tiempo_salida / INTRO_DIALOGO_SLIDE_MS
+            progreso = suavizar_movimiento(progreso)
+            x = x_destino + (x_fuera - x_destino) * progreso
+
+        x = int(x)
+
+        # Superficie transparente del cuadro
+        cuadro = pygame.Surface((ancho, alto), pygame.SRCALPHA)
+
+        pygame.draw.rect(
+            cuadro,
+            (10, 15, 30, 220),
+            (0, 0, ancho, alto),
+            border_radius=18
+        )
+
+        pygame.draw.rect(
+            cuadro,
+            AZUL_CYBER,
+            (0, 0, ancho, alto),
+            3,
+            border_radius=18
+        )
+
+        # Imagen temporal tipo "anime placeholder"
+        avatar_rect = pygame.Rect(18, 22, 115, 115)
+
+        pygame.draw.rect(
+            cuadro,
+            (25, 25, 45, 255),
+            avatar_rect,
+            border_radius=14
+        )
+
+        pygame.draw.rect(
+            cuadro,
+            VERDE_CYBER,
+            avatar_rect,
+            2,
+            border_radius=14
+        )
+
+        # Cabeza temporal
+        pygame.draw.circle(
+            cuadro,
+            (180, 220, 255, 255),
+            (avatar_rect.centerx, avatar_rect.y + 42),
+            24
+        )
+
+        # Cuerpo temporal
+        pygame.draw.polygon(
+            cuadro,
+            (100, 180, 255, 255),
+            [
+                (avatar_rect.centerx, avatar_rect.y + 70),
+                (avatar_rect.x + 28, avatar_rect.y + 105),
+                (avatar_rect.right - 28, avatar_rect.y + 105)
+            ]
+        )
+
+        fuente_avatar = pygame.font.SysFont(None, 18)
+        texto_avatar = fuente_avatar.render("ANIME TEMP", True, BLANCO)
+        cuadro.blit(
+            texto_avatar,
+            (avatar_rect.x + 12, avatar_rect.bottom + 8)
+        )
+
+        # Texto del diálogo
+        fuente_dialogo = pygame.font.SysFont(None, 28)
+        texto_render = fuente_dialogo.render(texto, True, BLANCO)
+
+        cuadro.blit(
+            texto_render,
+            (155, 55)
+        )
+
+        # Línea inferior decorativa
+        pygame.draw.line(
+            cuadro,
+            VERDE_CYBER,
+            (155, 92),
+            (ancho - 28, 92),
+            2
+        )
+
+        pantalla.blit(cuadro, (x, y))
+
+    def dibujar_dialogos_intro(tiempo_transcurrido):
+        duracion_dialogo = (
+                INTRO_DIALOGO_SLIDE_MS
+                + INTRO_DIALOGO_HOLD_MS
+                + INTRO_DIALOGO_SLIDE_MS
+        )
+
+        dialogos = [
+            ("izquierda", "Interaccion 1", 0),
+            ("derecha", "Interaccion 2", duracion_dialogo),
+            ("izquierda", "Interaccion 3", duracion_dialogo * 2),
+        ]
+
+        for lado, texto, inicio in dialogos:
+            tiempo_local = tiempo_transcurrido - inicio
+            dibujar_cuadro_dialogo_intro(lado, texto, tiempo_local)
+
+
+    def dibujar_intro_despegue():
+        pantalla.fill(NEGRO)
+
+        tiempo_actual = pygame.time.get_ticks()
+        tiempo_transcurrido = tiempo_actual - tiempo_inicio_intro
+
+        tiempo_despegue = max(
+            0,
+            tiempo_transcurrido - DURACION_INTRO_ESPERA_MS
+        )
+
+        progreso_despegue = min(
+            1,
+            tiempo_despegue / DURACION_INTRO_DESPEGUE_MS
+        )
+
+        desplazamiento = int(
+            progreso_despegue
+            * VELOCIDAD_SCROLL_DESPEGUE
+            * 120
+        )
+
+        # =========================
+        # Tierra al fondo
+        # =========================
+        tierra_x = ANCHO_PANTALLA // 2
+        tierra_y = 130 + desplazamiento
+        radio_tierra = 210
+
+        pygame.draw.circle(
+            pantalla,
+            (0, 90, 190),
+            (tierra_x, tierra_y),
+            radio_tierra
+        )
+
+        pygame.draw.circle(
+            pantalla,
+            (0, 180, 255),
+            (tierra_x, tierra_y),
+            radio_tierra,
+            4
+        )
+
+        # Continentes simples
+        pygame.draw.ellipse(
+            pantalla,
+            (30, 180, 90),
+            (tierra_x - 120, tierra_y - 70, 120, 55)
+        )
+
+        pygame.draw.ellipse(
+            pantalla,
+            (30, 180, 90),
+            (tierra_x + 20, tierra_y + 20, 130, 60)
+        )
+
+        pygame.draw.ellipse(
+            pantalla,
+            (30, 150, 80),
+            (tierra_x - 40, tierra_y + 80, 90, 45)
+        )
+
+        # =========================
+        # Estación / bahía de despegue
+        # =========================
+        estacion_y = 260 + desplazamiento
+
+        # Plataforma principal
+        pygame.draw.rect(
+            pantalla,
+            (35, 35, 45),
+            (ANCHO_PANTALLA // 2 - 210, estacion_y, 420, 420),
+            border_radius=18
+        )
+
+        pygame.draw.rect(
+            pantalla,
+            AZUL_CYBER,
+            (ANCHO_PANTALLA // 2 - 210, estacion_y, 420, 420),
+            3,
+            border_radius=18
+        )
+
+        # Pista central
+        pygame.draw.rect(
+            pantalla,
+            (15, 15, 22),
+            (ANCHO_PANTALLA // 2 - 55, estacion_y + 20, 110, 390),
+            border_radius=12
+        )
+
+        pygame.draw.rect(
+            pantalla,
+            VERDE_CYBER,
+            (ANCHO_PANTALLA // 2 - 55, estacion_y + 20, 110, 390),
+            2,
+            border_radius=12
+        )
+
+        # Líneas de pista
+        for i in range(8):
+            y_linea = estacion_y + 50 + i * 42
+            pygame.draw.line(
+                pantalla,
+                VERDE_CYBER,
+                (ANCHO_PANTALLA // 2, y_linea),
+                (ANCHO_PANTALLA // 2, y_linea + 20),
+                3
+            )
+
+        # Laterales de la estación
+        pygame.draw.rect(
+            pantalla,
+            (60, 60, 75),
+            (ANCHO_PANTALLA // 2 - 300, estacion_y + 80, 90, 220),
+            border_radius=12
+        )
+
+        pygame.draw.rect(
+            pantalla,
+            (60, 60, 75),
+            (ANCHO_PANTALLA // 2 + 210, estacion_y + 80, 90, 220),
+            border_radius=12
+        )
+
+        # =========================
+        # Nave del jugador fija
+        # =========================
+        jugador.x = ANCHO_PANTALLA // 2
+        jugador.y = ALTO_PANTALLA - 170
+        jugador.rect.center = (jugador.x, jugador.y)
+        jugador.dibujar(pantalla)
+
+        # Texto de intro
+        fuente_intro = pygame.font.SysFont(None, 30)
+
+        if tiempo_transcurrido < DURACION_INTRO_ESPERA_MS:
+            segundos_restantes = int(
+                (DURACION_INTRO_ESPERA_MS - tiempo_transcurrido) / 1000
+            ) + 1
+
+            texto_intro = fuente_intro.render(
+                f"Preparando despegue... {segundos_restantes}",
+                True,
+                BLANCO
+            )
+        else:
+            texto_intro = fuente_intro.render(
+                "Despegue iniciado",
+                True,
+                VERDE_CYBER
+            )
+
+        pantalla.blit(texto_intro, (20, ALTO_PANTALLA - 50))
+        dibujar_dialogos_intro(tiempo_transcurrido)
+
     def dibujar_escena_juego():
         pantalla.fill(NEGRO)
 
@@ -209,6 +594,20 @@ def main():
             BLANCO
         )
 
+        if tormenta_meteoritos_activa:
+            texto_fase = fuente.render(
+                f"TORMENTA DE METEORITOS: {meteoritos_tormenta_generados}/{TOTAL_METEORITOS_TORMENTA}",
+                True,
+                ROJO_ALERTA
+            )
+        else:
+            texto_fase = fuente.render(
+                f"Oleadas: {oleadas_generadas_ciclo}/{OLEADAS_ANTES_TORMENTA_METEORITOS}",
+                True,
+                BLANCO
+            )
+
+
         pantalla.blit(texto_titulo, (20, 20))
         pantalla.blit(texto_puntaje, (20, 50))
         pantalla.blit(texto_vidas, (20, 80))
@@ -216,6 +615,7 @@ def main():
         pantalla.blit(texto_pausa, (ANCHO_PANTALLA - 120, 20))
         pantalla.blit(texto_control, (ANCHO_PANTALLA - 210, 50))
         pantalla.blit(texto_powerups, (20, 140))
+        pantalla.blit(texto_fase, (20, 170))
 
 
         for bala in balas:
@@ -233,8 +633,6 @@ def main():
         for powerup in powerups:
             powerup.dibujar(pantalla)
 
-        for explosion in explosiones:
-            explosion.dibujar(pantalla)
 
         for scanner_effect in scanner_effects:
             scanner_effect.dibujar(pantalla)
@@ -243,7 +641,13 @@ def main():
             aliado.dibujar(pantalla)
 
         if final_boss is not None:
-            final_boss.dibujar(pantalla)
+            final_boss.dibujar(
+                pantalla,
+                mostrar_destruido=derrota_boss_en_proceso
+            )
+
+        for explosion in explosiones:
+            explosion.dibujar(pantalla)
 
         for misil in boss_missiles:
             misil.dibujar(pantalla)
@@ -271,7 +675,9 @@ def main():
                     elif evento.key == pygame.K_RETURN:
                         if opcion_menu_inicio == 0:
                             reiniciar_partida()
-                            estado = ESTADO_JUGANDO
+                            tiempo_inicio_intro = pygame.time.get_ticks()
+                            estado = ESTADO_INTRO
+                            pygame.mouse.set_visible(False)
 
                         elif opcion_menu_inicio == 1:
                             pygame.quit()
@@ -281,41 +687,16 @@ def main():
                         pygame.quit()
                         sys.exit()
 
+                elif estado == ESTADO_INTRO:
+                    if evento.key == pygame.K_ESCAPE:
+                        pygame.quit()
+                        sys.exit()
+
                 # =========================
                 # JUEGO ACTIVO
                 # =========================
                 elif estado == ESTADO_JUGANDO:
-                    if evento.key == pygame.K_SPACE:
-                        tiempo_actual = pygame.time.get_ticks()
-
-                        if weapon_activo:
-                            cadencia_actual = CADENCIA_ARMA_PODEROSA_MS
-                        else:
-                            cadencia_actual = CADENCIA_ARMA_NORMAL_MS
-
-                        puede_disparar = tiempo_actual - ultimo_disparo_ms >= cadencia_actual
-
-                        if puede_disparar:
-                            if weapon_activo and municion_weapon > 0:
-                                nueva_bala = PowerBullet(jugador.x, jugador.y - jugador.alto // 2)
-                                balas.append(nueva_bala)
-
-                                municion_weapon -= 1
-                                ultimo_disparo_ms = tiempo_actual
-                                sonidos.reproducir_disparo()
-
-                                if municion_weapon <= 0:
-                                    municion_weapon = 0
-                                    weapon_activo = False
-
-                            else:
-                                nueva_bala = Bullet(jugador.x, jugador.y - jugador.alto // 2)
-                                balas.append(nueva_bala)
-
-                                ultimo_disparo_ms = tiempo_actual
-                                sonidos.reproducir_disparo()
-
-                    elif evento.key == pygame.K_m:
+                    if evento.key == pygame.K_m:
                         control_mouse = not control_mouse
 
                         if control_mouse:
@@ -340,7 +721,6 @@ def main():
                     elif evento.key == pygame.K_2 and municion_weapon > 0:
                         # El arma poderosa se activa/desactiva solo por decisión del jugador
                         weapon_activo = not weapon_activo
-
 
                     elif evento.key == pygame.K_3 and tiene_allies:
                         # Aliados es de un solo uso: se consume al activarlo
@@ -367,7 +747,6 @@ def main():
                                 and municion_weapon > 0
                         ):
                             final_boss.iniciar_ataque_masivo()
-
 
                     elif evento.key == pygame.K_p:
                         estado = ESTADO_PAUSA
@@ -434,13 +813,24 @@ def main():
 
             # Eventos automáticos solo mientras se juega
             if estado == ESTADO_JUGANDO:
-                if evento.type == EVENTO_CREAR_ENEMIGO and not fase_boss_activa:
-                    nuevo_enemigo = Enemy()
-                    enemigos.append(nuevo_enemigo)
+                if (
+                        evento.type == EVENTO_CREAR_ENEMIGO
+                        and not fase_boss_activa
+                        and not tormenta_meteoritos_activa
+                        and oleadas_generadas_ciclo < OLEADAS_ANTES_TORMENTA_METEORITOS
+                ):
+                    nueva_oleada = EnemyWave(jugador)
+                    enemigos.extend(nueva_oleada.obtener_enemigos())
+                    oleadas_generadas_ciclo += 1
 
                 if evento.type == EVENTO_DISPARO_ENEMIGO and not fase_boss_activa:
-                    if len(enemigos) > 0:
-                        enemigo_que_dispara = random.choice(enemigos)
+                    enemigos_visibles = [
+                        enemigo for enemigo in enemigos
+                        if enemigo.estado != "esperando" and not enemigo.finalizado
+                    ]
+
+                    if len(enemigos_visibles) > 0:
+                        enemigo_que_dispara = random.choice(enemigos_visibles)
                         tipo_amenaza = random.choice(["malware", "bug", "alert"])
 
                         nueva_bala_enemiga = EnemyBullet(
@@ -451,9 +841,15 @@ def main():
 
                         balas_enemigas.append(nueva_bala_enemiga)
 
-                if evento.type == EVENTO_CREAR_METEORITO and not fase_boss_activa:
+                if (
+                        evento.type == EVENTO_CREAR_METEORITO
+                        and not fase_boss_activa
+                        and tormenta_meteoritos_activa
+                        and meteoritos_tormenta_generados < TOTAL_METEORITOS_TORMENTA
+                ):
                     nuevo_meteorito = Meteor()
                     meteoritos.append(nuevo_meteorito)
+                    meteoritos_tormenta_generados += 1
 
                 if evento.type == EVENTO_CREAR_POWERUP:
                     tipo_powerup = random.choice(["scanner", "weapon", "allies"])
@@ -465,6 +861,7 @@ def main():
                         and fase_boss_activa
                         and final_boss is not None
                         and not final_boss.esta_destruido()
+                        and not derrota_boss_en_proceso
                 ):
                     nuevo_misil = BossMissile(
                         final_boss.x,
@@ -476,6 +873,19 @@ def main():
         # =========================
         # ACTUALIZACIÓN DEL JUEGO
         # =========================
+
+        if estado == ESTADO_INTRO:
+            tiempo_actual = pygame.time.get_ticks()
+            tiempo_transcurrido = tiempo_actual - tiempo_inicio_intro
+
+            if tiempo_transcurrido >= (
+                    DURACION_INTRO_ESPERA_MS + DURACION_INTRO_DESPEGUE_MS
+            ):
+                estado = ESTADO_JUGANDO
+                pygame.mouse.set_visible(not control_mouse)
+
+                if control_mouse:
+                    pygame.mouse.set_pos((int(jugador.x), int(jugador.y)))
 
         if estado == ESTADO_JUGANDO:
             teclas = pygame.key.get_pressed()
@@ -490,11 +900,33 @@ def main():
                 fase_boss_activa = True
                 final_boss = FinalBoss()
 
+                # El Final Boss destruye a las naves enemigas activas al aparecer
+                enemigos_visibles = [
+                    enemigo for enemigo in enemigos
+                    if enemigo.estado != "esperando" and not enemigo.finalizado
+                ]
+
+                for enemigo in enemigos_visibles:
+                    explosiones.append(
+                        Explosion(
+                            enemigo.x,
+                            enemigo.y,
+                            cantidad_particulas=24
+                        )
+                    )
+
+                if len(enemigos_visibles) > 0:
+                    sonidos.reproducir_explosion()
+
                 # Limpiar campo para iniciar fase Boss
                 enemigos = []
                 meteoritos = []
                 balas_enemigas = []
                 powerups = []
+
+                # Cancelar tormenta si estaba activa
+                tormenta_meteoritos_activa = False
+                meteoritos_tormenta_generados = 0
 
             # Actualizar Final Boss
             if final_boss is not None:
@@ -506,16 +938,67 @@ def main():
                 if misil.esta_fuera_de_pantalla():
                     boss_missiles.remove(misil)
 
-            if final_boss is not None and final_boss.esta_destruido():
+            # Activar tormenta de meteoritos después de 10 oleadas completadas
+            if (
+                    not fase_boss_activa
+                    and not tormenta_meteoritos_activa
+                    and oleadas_generadas_ciclo >= OLEADAS_ANTES_TORMENTA_METEORITOS
+                    and len(enemigos) == 0
+            ):
+                tormenta_meteoritos_activa = True
+                meteoritos_tormenta_generados = 0
+
+            if (
+                    final_boss is not None
+                    and final_boss.esta_destruido()
+                    and not derrota_boss_en_proceso
+            ):
+                derrota_boss_en_proceso = True
+                tiempo_inicio_derrota_boss = pygame.time.get_ticks()
+                ultimo_explosion_boss = 0
+                posicion_boss_derrotado = (final_boss.x, final_boss.y)
+
                 boss_missiles = []
-                estado = ESTADO_VICTORIA
                 pygame.mouse.set_visible(True)
+
+            if derrota_boss_en_proceso:
+                tiempo_actual = pygame.time.get_ticks()
+                tiempo_transcurrido = tiempo_actual - tiempo_inicio_derrota_boss
+
+                if tiempo_actual - ultimo_explosion_boss >= INTERVALO_EXPLOSIONES_FINAL_BOSS_MS:
+                    ultimo_explosion_boss = tiempo_actual
+
+                    offset_x = random.randint(-70, 70)
+                    offset_y = random.randint(-45, 45)
+
+                    explosiones.append(
+                        Explosion(
+                            posicion_boss_derrotado[0] + offset_x,
+                            posicion_boss_derrotado[1] + offset_y,
+                            cantidad_particulas=random.randint(20, 38)
+                        )
+                    )
+
+                    sonidos.reproducir_explosion()
+
+                if tiempo_transcurrido >= (
+                        DURACION_EXPLOSIONES_FINAL_BOSS_MS + RETRASO_TRANSICION_VICTORIA_MS
+                ):
+                    derrota_boss_en_proceso = False
+                    final_boss = None
+                    estado = ESTADO_VICTORIA
+
+
 
             if control_mouse:
                 posicion_mouse = pygame.mouse.get_pos()
                 jugador.mover_con_mouse(posicion_mouse)
             else:
                 jugador.mover(teclas)
+            botones_mouse = pygame.mouse.get_pressed()
+
+            if teclas[pygame.K_SPACE] or (control_mouse and botones_mouse[0]):
+                intentar_disparar()
 
             for bala in balas[:]:
                 bala.actualizar()
@@ -540,6 +1023,17 @@ def main():
 
                 if meteorito.esta_fuera_de_pantalla():
                     meteoritos.remove(meteorito)
+
+            # Terminar tormenta cuando ya se generaron todos los meteoritos
+            # y no queda ninguno en pantalla
+            if (
+                    tormenta_meteoritos_activa
+                    and meteoritos_tormenta_generados >= TOTAL_METEORITOS_TORMENTA
+                    and len(meteoritos) == 0
+            ):
+                tormenta_meteoritos_activa = False
+                meteoritos_tormenta_generados = 0
+                oleadas_generadas_ciclo = 0
 
             for powerup in powerups[:]:
                 powerup.actualizar()
@@ -734,6 +1228,9 @@ def main():
 
         if estado == ESTADO_MENU:
             dibujar_menu_inicio(pantalla, opcion_menu_inicio)
+
+        elif estado == ESTADO_INTRO:
+            dibujar_intro_despegue()
 
         elif estado == ESTADO_JUGANDO:
             dibujar_escena_juego()

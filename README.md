@@ -20,7 +20,7 @@ En futuras versiones, el jugador deberá recolectar herramientas de cibersegurid
 Versión actual:
 
 ```text
-MVP 1.2
+MVP 1.3 Oleadas, fases de combate e intro cinemática
 ```
 Funcionalidades implementadas:
 
@@ -143,6 +143,114 @@ Salir en Game Over	ESC
 - Los misiles reciben más daño con arma poderosa.
 - Los misiles causan daño al jugador si impactan.
 - Los misiles desaparecen al derrotar al Final Boss.
+
+
+
+### Nuevas funcionalidades
+
+En esta versión se incorporó una mejora importante al flujo del juego, agregando fases de combate más ordenadas y una escena inicial previa al gameplay.
+
+### Intro cinemática de despegue
+
+Al presionar `Start`, el juego ya no inicia directamente en combate. Ahora se muestra una escena inicial donde:
+
+- La nave aparece en una bahía de despegue.
+- Se visualiza la Tierra al fondo.
+- La estación espacial permanece visible durante la preparación.
+- Luego se ejecuta una animación de despegue.
+- La estación y el planeta se desplazan hacia abajo para simular que la nave despega.
+- Al finalizar la intro, el jugador toma el control de la nave.
+
+### Diálogos temporales en la intro
+
+Durante la escena inicial se agregaron cuadros de diálogo animados:
+
+- Mensaje izquierdo: aparece desde fuera de la pantalla por la izquierda.
+- Mensaje derecho: aparece desde fuera de la pantalla por la derecha.
+- Cada mensaje permanece visible unos segundos y luego se retira.
+- Se agregó un avatar temporal tipo anime placeholder.
+- Los textos actuales son temporales: `Interaccion 1`, `Interaccion 2`, `Interaccion 3`.
+
+Estos elementos quedan preparados para reemplazarse más adelante por arte final estilo anime/cyberpunk.
+
+### Oleadas enemigas
+
+Las naves enemigas pequeñas ahora aparecen en oleadas:
+
+- Cantidad aleatoria de enemigos por oleada.
+- Formación ordenada en fila.
+- Aparición secuencial una nave tras otra.
+- Trayectoria curva tipo parabólica.
+- Aproximación peligrosa hacia la nave del jugador.
+- Escape fuera de pantalla si no son destruidas.
+- Las naves disparan durante su trayectoria.
+
+### Ciclo de combate
+
+Se agregó una estructura de fases:
+
+```text
+10 oleadas enemigas
+↓
+tormenta de meteoritos
+↓
+10 oleadas enemigas
+↓
+nueva tormenta de meteoritos
+
+Durante la tormenta de meteoritos:
+
+No aparecen nuevas oleadas enemigas.
+Se generan aproximadamente 50 meteoritos.
+Los meteoritos tienen distintos tamaños.
+Al pasar o destruirse todos, vuelven las oleadas enemigas.
+Entrada del Final Boss
+
+Cuando se activa la condición del Final Boss:
+
+Las naves enemigas activas desaparecen.
+Cada nave enemiga visible explota antes de ser retirada.
+Se refuerza visualmente la entrada del Final Boss como una amenaza dominante.
+Derrota del Final Boss
+
+Al destruir al Final Boss:
+
+El sprite del Boss permanece visible.
+Se generan múltiples explosiones sobre él durante varios segundos.
+La transición hacia la pantalla YOU WIN es más cinematográfica que en versiones anteriores.
+Control y jugabilidad
+
+Se mejoró la interacción del jugador:
+
+El juego inicia en modo mouse por defecto.
+La tecla M alterna entre control con mouse y teclado.
+En modo mouse, el clic izquierdo dispara.
+Mantener clic izquierdo presionado activa disparo automático.
+Mantener Spacebar presionado activa disparo automático.
+La cadencia de disparo respeta el tipo de arma activa.
+El juego puede ejecutarse en pantalla completa.
+Controles principales
+Acción	Control
+Iniciar partida	Enter
+Mover nave con mouse	Mouse
+Alternar mouse/teclado	M
+Disparar	Clic izquierdo o Spacebar
+Activar Scanner	1
+Activar / desactivar arma poderosa	2
+Llamar aliados	3
+Pausar	P
+Salir	ESC
+Archivos modificados principales
+main.py
+settings.py
+enemy.py
+enemy_wave.py
+final_boss.py
+Estado
+
+Versión en desarrollo validada manualmente en rama:
+
+feature/enemy-waves
 
 
 Tecnologías utilizadas
