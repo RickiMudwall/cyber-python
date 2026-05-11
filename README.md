@@ -20,7 +20,8 @@ En futuras versiones, el jugador deberá recolectar herramientas de cibersegurid
 Versión actual:
 
 ```text
-MVP 1.3 Oleadas, fases de combate e intro cinemática
+MVP 1.4 Diálogos cinemáticos con imágenes completas
+
 ```
 Funcionalidades implementadas:
 
@@ -189,6 +190,8 @@ Las naves enemigas pequeñas ahora aparecen en oleadas:
 
 Se agregó una estructura de fases:
 
+
+
 ```text
 10 oleadas enemigas
 ↓
@@ -248,9 +251,79 @@ enemy_wave.py
 final_boss.py
 Estado
 
+
+### Mejora incorporada
+
+Se reemplazó el sistema inicial de diálogos tipo tarjeta por un sistema de paneles cinemáticos basados en imágenes completas.
+
+Ahora cada diálogo puede ser diseñado como una imagen independiente que incluye:
+
+- Fondo visual propio.
+- Personaje, escena o elemento narrativo.
+- Frase integrada dentro de la imagen.
+- Estilo visual libre, como anime, cyberpunk, sci-fi o panel narrativo.
+
+Esto permite que los diálogos no dependan de texto renderizado por Pygame, sino de arte diseñado previamente.
+
+### Diálogos de la intro
+
+Durante la escena inicial de despegue se muestran tres paneles de diálogo:
+
+```text
+dialog_intro_1.png
+dialog_intro_2.png
+dialog_intro_3.png
+
 Versión en desarrollo validada manualmente en rama:
 
 feature/enemy-waves
+
+
+
+Comportamiento visual
+
+Los paneles mantienen la lógica animada de entrada y salida:
+
+El primer diálogo aparece desde la izquierda.
+El segundo diálogo aparece desde la derecha.
+El tercer diálogo aparece nuevamente desde la izquierda.
+Cada panel permanece visible durante unos segundos.
+Luego se retira por el mismo lado desde donde apareció.
+Sistema reutilizable
+
+Se agregó el archivo:
+
+dialog_sequence.py
+
+Este componente permite definir secuencias de diálogos reutilizables, por lo que más adelante se podrán agregar nuevos diálogos durante:
+
+La intro.
+Aparición del Final Boss.
+Tormentas de meteoritos.
+Momentos críticos de baja energía.
+Victoria o derrota.
+Eventos narrativos especiales durante el gameplay.
+Tamaño recomendado de imágenes
+
+Para buena calidad visual, se recomienda crear las imágenes fuente en alta resolución y dejar que el juego las escale.
+
+Recomendación actual:
+
+Imagen fuente recomendada: 1840 x 960 px
+Formato: PNG
+Ubicación: assets/images/dialogs/
+
+El juego las muestra visualmente como paneles cinemáticos dentro de la intro.
+
+Archivos principales modificados
+main.py
+settings.py
+dialog_sequence.py
+README.md
+assets/images/dialogs/
+Estado
+
+Sistema de diálogos por imágenes completas validado manualmente en la intro del juego.
 
 
 Tecnologías utilizadas

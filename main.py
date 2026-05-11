@@ -7,6 +7,7 @@ from powerup import PowerUp
 from ally_ship import AllyShip
 from final_boss import FinalBoss
 from boss_missile import BossMissile
+from dialog_sequence import DialogSequence
 
 from scanner_effect import ScannerEffect
 
@@ -89,6 +90,30 @@ def main():
     tiempo_inicio_intro = 0
     control_mouse = True
 
+    duracion_dialogo_intro = (
+            INTRO_DIALOGO_SLIDE_MS
+            + INTRO_DIALOGO_HOLD_MS
+            + INTRO_DIALOGO_SLIDE_MS
+    )
+
+    dialogos_intro = DialogSequence([
+        {
+            "lado": "izquierda",
+            "imagen": "dialog_intro_1.png",
+            "inicio_ms": 0
+        },
+        {
+            "lado": "derecha",
+            "imagen": "dialog_intro_2.png",
+            "inicio_ms": duracion_dialogo_intro
+        },
+        {
+            "lado": "izquierda",
+            "imagen": "dialog_intro_3.png",
+            "inicio_ms": duracion_dialogo_intro * 2
+        },
+    ])
+
     # Variables de partida
     jugador = Player()
     balas = []
@@ -140,6 +165,9 @@ def main():
     pygame.time.set_timer(EVENTO_CREAR_METEORITO, INTERVALO_METEORITOS_TORMENTA_MS)
     pygame.time.set_timer(EVENTO_CREAR_POWERUP, 3000)
     pygame.time.set_timer(EVENTO_DISPARO_BOSS, 1700)
+
+
+
 
     def reiniciar_partida():
         nonlocal jugador, balas, enemigos, balas_enemigas, meteoritos
@@ -265,152 +293,8 @@ def main():
             ultimo_disparo_ms = tiempo_actual
             sonidos.reproducir_disparo()
 
-    def suavizar_movimiento(progreso):
-        """
-        Suaviza el movimiento de entrada y salida del cuadro.
-        Evita que el movimiento se vea robótico.
-        """
-        return progreso * progreso * (3 - 2 * progreso)
-
-    def dibujar_cuadro_dialogo_intro(lado, texto, tiempo_local):
-        duracion_total = (
-                INTRO_DIALOGO_SLIDE_MS
-                + INTRO_DIALOGO_HOLD_MS
-                + INTRO_DIALOGO_SLIDE_MS
-        )
-
-        if tiempo_local < 0 or tiempo_local > duracion_total:
-            return
-
-        ancho = INTRO_DIALOGO_ANCHO
-        alto = INTRO_DIALOGO_ALTO
-        y = INTRO_DIALOGO_MARGEN_SUPERIOR
-
-        if lado == "izquierda":
-            x_fuera = -ancho - 40
-            x_destino = INTRO_DIALOGO_MARGEN_LATERAL
-        else:
-            x_fuera = ANCHO_PANTALLA + 40
-            x_destino = ANCHO_PANTALLA - ancho - INTRO_DIALOGO_MARGEN_LATERAL
-
-        # Fase de entrada
-        if tiempo_local <= INTRO_DIALOGO_SLIDE_MS:
-            progreso = tiempo_local / INTRO_DIALOGO_SLIDE_MS
-            progreso = suavizar_movimiento(progreso)
-            x = x_fuera + (x_destino - x_fuera) * progreso
-
-        # Fase quieta
-        elif tiempo_local <= INTRO_DIALOGO_SLIDE_MS + INTRO_DIALOGO_HOLD_MS:
-            x = x_destino
-
-        # Fase de salida
-        else:
-            tiempo_salida = tiempo_local - INTRO_DIALOGO_SLIDE_MS - INTRO_DIALOGO_HOLD_MS
-            progreso = tiempo_salida / INTRO_DIALOGO_SLIDE_MS
-            progreso = suavizar_movimiento(progreso)
-            x = x_destino + (x_fuera - x_destino) * progreso
-
-        x = int(x)
-
-        # Superficie transparente del cuadro
-        cuadro = pygame.Surface((ancho, alto), pygame.SRCALPHA)
-
-        pygame.draw.rect(
-            cuadro,
-            (10, 15, 30, 220),
-            (0, 0, ancho, alto),
-            border_radius=18
-        )
-
-        pygame.draw.rect(
-            cuadro,
-            AZUL_CYBER,
-            (0, 0, ancho, alto),
-            3,
-            border_radius=18
-        )
-
-        # Imagen temporal tipo "anime placeholder"
-        avatar_rect = pygame.Rect(18, 22, 115, 115)
-
-        pygame.draw.rect(
-            cuadro,
-            (25, 25, 45, 255),
-            avatar_rect,
-            border_radius=14
-        )
-
-        pygame.draw.rect(
-            cuadro,
-            VERDE_CYBER,
-            avatar_rect,
-            2,
-            border_radius=14
-        )
-
-        # Cabeza temporal
-        pygame.draw.circle(
-            cuadro,
-            (180, 220, 255, 255),
-            (avatar_rect.centerx, avatar_rect.y + 42),
-            24
-        )
-
-        # Cuerpo temporal
-        pygame.draw.polygon(
-            cuadro,
-            (100, 180, 255, 255),
-            [
-                (avatar_rect.centerx, avatar_rect.y + 70),
-                (avatar_rect.x + 28, avatar_rect.y + 105),
-                (avatar_rect.right - 28, avatar_rect.y + 105)
-            ]
-        )
-
-        fuente_avatar = pygame.font.SysFont(None, 18)
-        texto_avatar = fuente_avatar.render("ANIME TEMP", True, BLANCO)
-        cuadro.blit(
-            texto_avatar,
-            (avatar_rect.x + 12, avatar_rect.bottom + 8)
-        )
-
-        # Texto del diálogo
-        fuente_dialogo = pygame.font.SysFont(None, 28)
-        texto_render = fuente_dialogo.render(texto, True, BLANCO)
-
-        cuadro.blit(
-            texto_render,
-            (155, 55)
-        )
-
-        # Línea inferior decorativa
-        pygame.draw.line(
-            cuadro,
-            VERDE_CYBER,
-            (155, 92),
-            (ancho - 28, 92),
-            2
-        )
-
-        pantalla.blit(cuadro, (x, y))
-
     def dibujar_dialogos_intro(tiempo_transcurrido):
-        duracion_dialogo = (
-                INTRO_DIALOGO_SLIDE_MS
-                + INTRO_DIALOGO_HOLD_MS
-                + INTRO_DIALOGO_SLIDE_MS
-        )
-
-        dialogos = [
-            ("izquierda", "Interaccion 1", 0),
-            ("derecha", "Interaccion 2", duracion_dialogo),
-            ("izquierda", "Interaccion 3", duracion_dialogo * 2),
-        ]
-
-        for lado, texto, inicio in dialogos:
-            tiempo_local = tiempo_transcurrido - inicio
-            dibujar_cuadro_dialogo_intro(lado, texto, tiempo_local)
-
+        dialogos_intro.dibujar(pantalla, tiempo_transcurrido)
 
     def dibujar_intro_despegue():
         pantalla.fill(NEGRO)
