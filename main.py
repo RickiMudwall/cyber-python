@@ -1504,6 +1504,15 @@ def main():
         # DIBUJO EN PANTALLA
         # =========================
 
+        sonidos.actualizar_audio_estado(
+            estado,
+            fase_boss_activa=fase_boss_activa,
+            final_boss_activo=(
+                final_boss is not None
+                and not final_boss.esta_destruido()
+            )
+        )
+
         if estado == ESTADO_MENU:
             dibujar_menu_inicio(pantalla, opcion_menu_inicio)
 
