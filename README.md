@@ -7,10 +7,10 @@ El proyecto forma parte de mi portafolio técnico y muestra trabajo práctico co
 ## Estado Actual
 
 ```text
-MVP 1.5 - Intro visual, nave animada y efectos cinemáticos
+MVP 1.6 - Intro visual, nave animada, efectos cinemáticos y audio por estado
 ```
 
-La versión actual incluye una intro cinemática de despegue con sprites por capas, efecto de viaje a velocidad luz, nave del jugador con inclinación lateral y propulsores animados.
+La versión actual incluye una intro cinemática de despegue con sprites por capas, efecto de viaje a velocidad luz, nave del jugador con inclinación lateral, propulsores animados, música por estado y ambientes en loop para motores.
 
 ## Características
 
@@ -28,6 +28,8 @@ La versión actual incluye una intro cinemática de despegue con sprites por cap
 - Final Boss con barra de vida, misiles teledirigidos y secuencia especial de victoria.
 - Explosiones por partículas y efectos visuales de impacto.
 - Sonidos generados localmente para disparos, daño, impactos, explosiones y Game Over.
+- Música MP3 separada para menú, intro, gameplay, pausa, Game Over, victoria y fase Boss.
+- Ambientes continuos para motor de nave del jugador y motor del Final Boss.
 
 ## Intro Cinemática
 
@@ -96,6 +98,46 @@ Los propulsores se pueden regenerar con:
 python generate_player_thrusters.py
 ```
 
+## Audio y Música
+
+La música principal se carga desde:
+
+```text
+assets/sounds/source/music/
+```
+
+Asignación actual:
+
+| Archivo | Uso |
+|---|---|
+| `menu_start.mp3` | Menú inicial |
+| `intro.mp3` | Intro cinemática |
+| `gameplay.mp3` | Gameplay normal |
+| `boss_appearance.mp3` | Aparición y fase del Final Boss |
+| `pause_menu.mp3` | Menú de pausa |
+| `game_over.mp3` | Pantalla Game Over |
+| `victory.mp3` | Pantalla You Win |
+| `ship_engine_loop.mp3` | Motor constante de la nave del jugador |
+| `final_boss_engine_loop.mp3` | Motor constante del Final Boss |
+
+Los efectos cortos siguen en:
+
+```text
+assets/sounds/
+```
+
+Efectos actuales:
+
+```text
+player_shoot.wav
+bullet_impact.wav
+explosion.wav
+player_damage.wav
+game_over.wav
+```
+
+El cambio de música se controla desde `sound_manager.py` según el estado del juego. Los loops de motor usan canales separados para que puedan sonar al mismo tiempo que la música de fondo.
+
 ## Controles
 
 | Acción | Control |
@@ -149,6 +191,7 @@ scanner_effect.py           Efecto visual del scanner
 explosion.py                Partículas de explosión
 starfield.py                Fondo de estrellas
 sound_manager.py            Carga y reproducción de sonidos
+assets/sounds/source/music/ Música MP3 por estado y loops de motor
 dialog_sequence.py          Diálogos cinemáticos de intro
 ui.py                       Menús y textos de interfaz
 generate_assets.py          Generador de assets base
@@ -185,4 +228,5 @@ pygame-ce==2.5.6
 - Los assets deben ejecutarse desde la raíz del proyecto porque las rutas son relativas.
 - Algunos sprites importados fueron exportados como PNG RGB con falso fondo de transparencia; el código limpia fondos claros conectados al borde al cargarlos.
 - El árbol visual de la intro está separado en capas para poder seguir mejorando profundidad y animación.
+- Los MP3 pueden mostrar advertencias de metadatos ID3 en consola; si ocurre, se corrige reexportando el archivo sin metadatos o limpiando las etiquetas.
 - Las naves enemigas todavía usan sprites base; su actualización visual queda pendiente para una siguiente etapa.
