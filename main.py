@@ -3,6 +3,7 @@
 import pygame
 import sys
 import random
+import os
 from powerup import PowerUp
 from ally_ship import AllyShip
 from final_boss import FinalBoss
@@ -32,7 +33,6 @@ from settings import (
     ESTADO_INTRO,
     DURACION_INTRO_ESPERA_MS,
     DURACION_INTRO_DESPEGUE_MS,
-    VELOCIDAD_SCROLL_DESPEGUE,
     MUNICION_ARMA_PODEROSA_POR_POWERUP,
     CADENCIA_ARMA_NORMAL_MS,
     CADENCIA_ARMA_PODEROSA_MS,
@@ -52,6 +52,24 @@ from settings import (
     INTRO_DIALOGO_ALTO,
     INTRO_DIALOGO_MARGEN_LATERAL,
     INTRO_DIALOGO_MARGEN_SUPERIOR,
+    INTRO_SPRITES_RUTA_BASE,
+    INTRO_TIERRA_IMAGEN,
+    INTRO_ESTACION_FONDO_IMAGEN,
+    INTRO_ESTACION_FRENTE_IMAGEN,
+    INTRO_TIERRA_ANCHO,
+    INTRO_TIERRA_ALTO,
+    INTRO_TIERRA_CENTRO_Y,
+    INTRO_ESTACION_ANCHO,
+    INTRO_ESTACION_ALTO,
+    INTRO_ESTACION_FONDO_Y,
+    INTRO_ESTACION_FRENTE_Y,
+    INTRO_ESTACION_COMPLETA_EN_PROGRESO,
+    INTRO_MARGEN_SALIDA_SPRITES,
+    INTRO_JUGADOR_Y,
+    INTRO_VELOCIDAD_LUZ_ALTO_EFECTO,
+    INTRO_VELOCIDAD_LUZ_CANTIDAD_ESTRELLAS,
+    INTRO_VELOCIDAD_LUZ_INICIO_FADE_PROGRESO,
+    DURACION_VELOCIDAD_LUZ_JUGANDO_MS,
 )
 
 from player import Player
@@ -83,11 +101,102 @@ def main():
     fondo_estrellas = StarField()
     sonidos = SoundManager()
 
+    def es_pixel_fondo_claro(color):
+        r, g, b = color[:3]
+        return (
+            r >= 215
+            and g >= 215
+            and b >= 215
+            and max(r, g, b) - min(r, g, b) <= 24
+        )
+
+    def remover_fondo_claro_conectado(superficie, puntos_extra=None):
+        """
+        Limpia el tablero blanco/gris exportado como RGB en assets que
+        deberían tener transparencia. Solo elimina zonas conectadas al borde
+        o a puntos seguros, para no borrar luces internas del sprite.
+        """
+        ancho, alto = superficie.get_size()
+        visitado = bytearray(ancho * alto)
+        pila = []
+
+        def agregar_si_fondo(x, y):
+            indice = y * ancho + x
+
+            if visitado[indice]:
+                return
+
+            visitado[indice] = 1
+
+            if es_pixel_fondo_claro(superficie.get_at((x, y))):
+                pila.append((x, y))
+
+        for x in range(ancho):
+            agregar_si_fondo(x, 0)
+            agregar_si_fondo(x, alto - 1)
+
+        for y in range(alto):
+            agregar_si_fondo(0, y)
+            agregar_si_fondo(ancho - 1, y)
+
+        if puntos_extra:
+            for x, y in puntos_extra:
+                if 0 <= x < ancho and 0 <= y < alto:
+                    agregar_si_fondo(x, y)
+
+        while pila:
+            x, y = pila.pop()
+            r, g, b, _ = superficie.get_at((x, y))
+            superficie.set_at((x, y), (r, g, b, 0))
+
+            for vecino_x, vecino_y in (
+                (x - 1, y),
+                (x + 1, y),
+                (x, y - 1),
+                (x, y + 1),
+            ):
+                if 0 <= vecino_x < ancho and 0 <= vecino_y < alto:
+                    agregar_si_fondo(vecino_x, vecino_y)
+
+    def cargar_sprite_intro(nombre_archivo, tamano, limpiar_fondo=False, puntos_extra=None):
+        ruta = os.path.join(INTRO_SPRITES_RUTA_BASE, nombre_archivo)
+        imagen = pygame.image.load(ruta).convert_alpha()
+        imagen = pygame.transform.smoothscale(imagen, tamano)
+
+        if limpiar_fondo:
+            remover_fondo_claro_conectado(imagen, puntos_extra=puntos_extra)
+
+        return imagen
+
+    intro_tierra = cargar_sprite_intro(
+        INTRO_TIERRA_IMAGEN,
+        (INTRO_TIERRA_ANCHO, INTRO_TIERRA_ALTO),
+        limpiar_fondo=True
+    )
+
+    intro_estacion_fondo = cargar_sprite_intro(
+        INTRO_ESTACION_FONDO_IMAGEN,
+        (INTRO_ESTACION_ANCHO, INTRO_ESTACION_ALTO)
+    )
+
+    intro_estacion_frente = cargar_sprite_intro(
+        INTRO_ESTACION_FRENTE_IMAGEN,
+        (INTRO_ESTACION_ANCHO, INTRO_ESTACION_ALTO),
+        limpiar_fondo=True,
+        puntos_extra=[
+            (x, y)
+            for x in range(0, INTRO_ESTACION_ANCHO, 40)
+            for y in range(0, INTRO_ESTACION_ALTO, 40)
+        ]
+    )
+
     # Estado inicial
     estado = ESTADO_MENU
     opcion_menu_inicio = 0
     opcion_menu_pausa = 0
     tiempo_inicio_intro = 0
+    tiempo_inicio_efecto_velocidad_luz_jugando = None
+    sincronizar_mouse_con_jugador = False
     control_mouse = True
 
     duracion_dialogo_intro = (
@@ -188,6 +297,8 @@ def main():
         nonlocal tiempo_inicio_derrota_boss
         nonlocal ultimo_explosion_boss
         nonlocal posicion_boss_derrotado
+        nonlocal tiempo_inicio_efecto_velocidad_luz_jugando
+        nonlocal sincronizar_mouse_con_jugador
 
         jugador = Player()
         balas = []
@@ -224,6 +335,8 @@ def main():
         tiempo_inicio_derrota_boss = 0
         ultimo_explosion_boss = 0
         posicion_boss_derrotado = (0, 0)
+        tiempo_inicio_efecto_velocidad_luz_jugando = None
+        sincronizar_mouse_con_jugador = False
 
     def aplicar_danio_al_jugador(cantidad_danio, particulas_impacto=18):
         nonlocal energia, vidas, estado
@@ -296,6 +409,85 @@ def main():
     def dibujar_dialogos_intro(tiempo_transcurrido):
         dialogos_intro.dibujar(pantalla, tiempo_transcurrido)
 
+    def suavizar_progreso_intro(progreso):
+        return progreso * progreso * (3 - 2 * progreso)
+
+    def dibujar_efecto_velocidad_luz(y, intensidad=1.0, progreso=0.0):
+        intensidad = max(0, min(1, intensidad))
+        progreso = max(0, min(1, progreso))
+
+        if intensidad <= 0:
+            return
+
+        capa = pygame.Surface(
+            (ANCHO_PANTALLA, INTRO_VELOCIDAD_LUZ_ALTO_EFECTO),
+            pygame.SRCALPHA
+        )
+
+        tiempo_actual = pygame.time.get_ticks()
+
+        if progreso < 0.22:
+            estiramiento = 0
+        elif progreso < 0.55:
+            estiramiento = (progreso - 0.22) / 0.33
+        elif progreso < 0.78:
+            estiramiento = 1 - ((progreso - 0.55) / 0.23)
+        else:
+            estiramiento = 0
+
+        estiramiento = suavizar_progreso_intro(estiramiento)
+        desplazamiento_estrellas = int(progreso * 95)
+        pulso = 0.75 + 0.25 * ((tiempo_actual // 90) % 2)
+
+        tonos_estrellas = [
+            (255, 255, 255),
+            (160, 220, 255),
+            (90, 245, 255),
+            (255, 235, 170),
+            (190, 150, 255),
+        ]
+
+        for indice in range(INTRO_VELOCIDAD_LUZ_CANTIDAD_ESTRELLAS):
+            base_x = (indice * 73 + (indice * indice * 17)) % ANCHO_PANTALLA
+            base_y = (
+                indice * 41
+                + (indice % 7) * 13
+            ) % INTRO_VELOCIDAD_LUZ_ALTO_EFECTO
+
+            x = base_x
+            y_estrella = (
+                base_y
+                + desplazamiento_estrellas
+                + (tiempo_actual // 38 if estiramiento > 0 else 0)
+            ) % INTRO_VELOCIDAD_LUZ_ALTO_EFECTO
+
+            tono = tonos_estrellas[indice % len(tonos_estrellas)]
+            brillo = 140 + (indice % 5) * 22
+            alpha = int(min(255, brillo * intensidad * pulso))
+
+            if estiramiento <= 0.02:
+                radio = 1 + (indice % 3 == 0)
+                pygame.draw.circle(
+                    capa,
+                    (*tono, alpha),
+                    (int(x), int(y_estrella)),
+                    radio
+                )
+            else:
+                largo = int((28 + (indice % 6) * 12) * estiramiento)
+                grosor = 1 + int(estiramiento * 2)
+                alpha_linea = int(alpha * (0.7 + estiramiento * 0.3))
+
+                pygame.draw.line(
+                    capa,
+                    (*tono, alpha_linea),
+                    (int(x), int(y_estrella - largo // 2)),
+                    (int(x), int(y_estrella + largo)),
+                    grosor
+                )
+
+        pantalla.blit(capa, (0, int(y)))
+
     def dibujar_intro_despegue():
         pantalla.fill(NEGRO)
 
@@ -312,123 +504,101 @@ def main():
             tiempo_despegue / DURACION_INTRO_DESPEGUE_MS
         )
 
-        desplazamiento = int(
-            progreso_despegue
-            * VELOCIDAD_SCROLL_DESPEGUE
-            * 120
+        progreso_tierra = suavizar_progreso_intro(progreso_despegue)
+        progreso_estacion = min(
+            1,
+            progreso_despegue / INTRO_ESTACION_COMPLETA_EN_PROGRESO
+        )
+        progreso_estacion = suavizar_progreso_intro(progreso_estacion)
+
+        tierra_y_inicial = (
+            INTRO_TIERRA_CENTRO_Y
+            - INTRO_TIERRA_ALTO // 2
+        )
+        salida_tierra = (
+            ALTO_PANTALLA
+            - tierra_y_inicial
+            + INTRO_MARGEN_SALIDA_SPRITES
+        )
+        salida_estacion_fondo = (
+            ALTO_PANTALLA
+            - INTRO_ESTACION_FONDO_Y
+            + INTRO_MARGEN_SALIDA_SPRITES
+        )
+        salida_estacion_frente = (
+            ALTO_PANTALLA
+            - INTRO_ESTACION_FRENTE_Y
+            + INTRO_MARGEN_SALIDA_SPRITES
         )
 
-        # =========================
-        # Tierra al fondo
-        # =========================
-        tierra_x = ANCHO_PANTALLA // 2
-        tierra_y = 130 + desplazamiento
-        radio_tierra = 210
-
-        pygame.draw.circle(
-            pantalla,
-            (0, 90, 190),
-            (tierra_x, tierra_y),
-            radio_tierra
+        desplazamiento_tierra = int(salida_tierra * progreso_tierra)
+        desplazamiento_estacion_fondo = int(
+            salida_estacion_fondo * progreso_estacion
+        )
+        desplazamiento_estacion_frente = int(
+            salida_estacion_frente * progreso_estacion
         )
 
-        pygame.draw.circle(
-            pantalla,
-            (0, 180, 255),
-            (tierra_x, tierra_y),
-            radio_tierra,
-            4
+        tierra_x = (ANCHO_PANTALLA - INTRO_TIERRA_ANCHO) // 2
+        tierra_y = tierra_y_inicial + desplazamiento_tierra
+
+        pantalla.blit(intro_tierra, (tierra_x, tierra_y))
+
+        estacion_fondo_y = (
+            INTRO_ESTACION_FONDO_Y
+            + desplazamiento_estacion_fondo
         )
 
-        # Continentes simples
-        pygame.draw.ellipse(
-            pantalla,
-            (30, 180, 90),
-            (tierra_x - 120, tierra_y - 70, 120, 55)
-        )
-
-        pygame.draw.ellipse(
-            pantalla,
-            (30, 180, 90),
-            (tierra_x + 20, tierra_y + 20, 130, 60)
-        )
-
-        pygame.draw.ellipse(
-            pantalla,
-            (30, 150, 80),
-            (tierra_x - 40, tierra_y + 80, 90, 45)
-        )
-
-        # =========================
-        # Estación / bahía de despegue
-        # =========================
-        estacion_y = 260 + desplazamiento
-
-        # Plataforma principal
-        pygame.draw.rect(
-            pantalla,
-            (35, 35, 45),
-            (ANCHO_PANTALLA // 2 - 210, estacion_y, 420, 420),
-            border_radius=18
-        )
-
-        pygame.draw.rect(
-            pantalla,
-            AZUL_CYBER,
-            (ANCHO_PANTALLA // 2 - 210, estacion_y, 420, 420),
-            3,
-            border_radius=18
-        )
-
-        # Pista central
-        pygame.draw.rect(
-            pantalla,
-            (15, 15, 22),
-            (ANCHO_PANTALLA // 2 - 55, estacion_y + 20, 110, 390),
-            border_radius=12
-        )
-
-        pygame.draw.rect(
-            pantalla,
-            VERDE_CYBER,
-            (ANCHO_PANTALLA // 2 - 55, estacion_y + 20, 110, 390),
-            2,
-            border_radius=12
-        )
-
-        # Líneas de pista
-        for i in range(8):
-            y_linea = estacion_y + 50 + i * 42
-            pygame.draw.line(
-                pantalla,
-                VERDE_CYBER,
-                (ANCHO_PANTALLA // 2, y_linea),
-                (ANCHO_PANTALLA // 2, y_linea + 20),
-                3
+        pantalla.blit(
+            intro_estacion_fondo,
+            (
+                (ANCHO_PANTALLA - INTRO_ESTACION_ANCHO) // 2,
+                estacion_fondo_y
             )
-
-        # Laterales de la estación
-        pygame.draw.rect(
-            pantalla,
-            (60, 60, 75),
-            (ANCHO_PANTALLA // 2 - 300, estacion_y + 80, 90, 220),
-            border_radius=12
-        )
-
-        pygame.draw.rect(
-            pantalla,
-            (60, 60, 75),
-            (ANCHO_PANTALLA // 2 + 210, estacion_y + 80, 90, 220),
-            border_radius=12
         )
 
         # =========================
         # Nave del jugador fija
         # =========================
         jugador.x = ANCHO_PANTALLA // 2
-        jugador.y = ALTO_PANTALLA - 170
+        jugador.y = INTRO_JUGADOR_Y
         jugador.rect.center = (jugador.x, jugador.y)
+
+        if progreso_despegue > 0:
+            jugador.actualizar_estado_movimiento(0, -1)
+        else:
+            jugador.actualizar_estado_movimiento(0, 0)
+
         jugador.dibujar(pantalla)
+
+        estacion_frente_y = (
+            INTRO_ESTACION_FRENTE_Y
+            + desplazamiento_estacion_frente
+        )
+
+        pantalla.blit(
+            intro_estacion_frente,
+            (
+                (ANCHO_PANTALLA - INTRO_ESTACION_ANCHO) // 2,
+                estacion_frente_y
+            )
+        )
+
+        if progreso_despegue > 0:
+            intensidad_velocidad_luz = min(1, progreso_despegue / 0.18)
+
+            if progreso_despegue > INTRO_VELOCIDAD_LUZ_INICIO_FADE_PROGRESO:
+                progreso_fade = (
+                    progreso_despegue
+                    - INTRO_VELOCIDAD_LUZ_INICIO_FADE_PROGRESO
+                ) / (1 - INTRO_VELOCIDAD_LUZ_INICIO_FADE_PROGRESO)
+                intensidad_velocidad_luz *= 1 - progreso_fade
+
+            dibujar_efecto_velocidad_luz(
+                0,
+                intensidad_velocidad_luz,
+                progreso_despegue
+            )
 
         # Texto de intro
         fuente_intro = pygame.font.SysFont(None, 30)
@@ -537,6 +707,31 @@ def main():
             misil.dibujar(pantalla)
 
         jugador.dibujar(pantalla)
+
+        if tiempo_inicio_efecto_velocidad_luz_jugando is not None:
+            tiempo_efecto = (
+                pygame.time.get_ticks()
+                - tiempo_inicio_efecto_velocidad_luz_jugando
+            )
+            progreso_efecto = min(
+                1,
+                tiempo_efecto / DURACION_VELOCIDAD_LUZ_JUGANDO_MS
+            )
+            progreso_salida = suavizar_progreso_intro(progreso_efecto)
+            y_velocidad_luz = (
+                ALTO_PANTALLA
+                - INTRO_VELOCIDAD_LUZ_ALTO_EFECTO
+                + int(
+                    progreso_salida
+                    * (INTRO_VELOCIDAD_LUZ_ALTO_EFECTO + 80)
+                )
+            )
+
+            dibujar_efecto_velocidad_luz(
+                y_velocidad_luz,
+                1 - progreso_efecto,
+                progreso_efecto
+            )
 
     while True:
         for evento in pygame.event.get():
@@ -766,12 +961,26 @@ def main():
                     DURACION_INTRO_ESPERA_MS + DURACION_INTRO_DESPEGUE_MS
             ):
                 estado = ESTADO_JUGANDO
+                tiempo_inicio_efecto_velocidad_luz_jugando = tiempo_actual
+                jugador.x = ANCHO_PANTALLA // 2
+                jugador.y = INTRO_JUGADOR_Y
+                jugador.rect.center = (jugador.x, jugador.y)
                 pygame.mouse.set_visible(not control_mouse)
 
                 if control_mouse:
                     pygame.mouse.set_pos((int(jugador.x), int(jugador.y)))
+                    sincronizar_mouse_con_jugador = True
 
         if estado == ESTADO_JUGANDO:
+            if tiempo_inicio_efecto_velocidad_luz_jugando is not None:
+                tiempo_efecto_velocidad_luz = (
+                    pygame.time.get_ticks()
+                    - tiempo_inicio_efecto_velocidad_luz_jugando
+                )
+
+                if tiempo_efecto_velocidad_luz >= DURACION_VELOCIDAD_LUZ_JUGANDO_MS:
+                    tiempo_inicio_efecto_velocidad_luz_jugando = None
+
             teclas = pygame.key.get_pressed()
 
             # Activar fase Final Boss cuando se cumplen los requisitos
@@ -874,7 +1083,10 @@ def main():
 
 
 
-            if control_mouse:
+            if control_mouse and sincronizar_mouse_con_jugador:
+                pygame.mouse.set_pos((int(jugador.x), int(jugador.y)))
+                sincronizar_mouse_con_jugador = False
+            elif control_mouse:
                 posicion_mouse = pygame.mouse.get_pos()
                 jugador.mover_con_mouse(posicion_mouse)
             else:
