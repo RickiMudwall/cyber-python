@@ -4,6 +4,7 @@ import pygame
 import sys
 import random
 import os
+import math
 from powerup import PowerUp
 from ally_ship import AllyShip
 from final_boss import FinalBoss
@@ -43,6 +44,9 @@ from settings import (
     OLEADAS_ANTES_TORMENTA_METEORITOS,
     TOTAL_METEORITOS_TORMENTA,
     INTERVALO_METEORITOS_TORMENTA_MS,
+    DURACION_TEMBLOR_ENTRADA_BOSS_MS,
+    DURACION_REMOLINO_ENTRADA_BOSS_MS,
+    INTENSIDAD_TEMBLOR_ENTRADA_BOSS,
     DURACION_EXPLOSIONES_FINAL_BOSS_MS,
     INTERVALO_EXPLOSIONES_FINAL_BOSS_MS,
     RETRASO_TRANSICION_VICTORIA_MS,
@@ -197,6 +201,7 @@ def main():
     tiempo_inicio_intro = 0
     tiempo_inicio_efecto_velocidad_luz_jugando = None
     sincronizar_mouse_con_jugador = False
+    frames_sincronizacion_mouse = 0
     control_mouse = True
 
     duracion_dialogo_intro = (
@@ -237,6 +242,11 @@ def main():
     boss_missiles = []
     final_boss = None
     fase_boss_activa = False
+    entrada_boss_en_proceso = False
+    tiempo_inicio_entrada_boss = 0
+    punto_aparicion_boss = (ANCHO_PANTALLA // 2, 120)
+    boss_previsualizacion_entrada = None
+    enemigos_boss_explotados = False
     derrota_boss_en_proceso = False
     tiempo_inicio_derrota_boss = 0
     ultimo_explosion_boss = 0
@@ -289,6 +299,11 @@ def main():
         nonlocal aliados
         nonlocal aliados_usan_weapon
         nonlocal final_boss, fase_boss_activa
+        nonlocal entrada_boss_en_proceso
+        nonlocal tiempo_inicio_entrada_boss
+        nonlocal punto_aparicion_boss
+        nonlocal boss_previsualizacion_entrada
+        nonlocal enemigos_boss_explotados
         nonlocal boss_missiles
         nonlocal oleadas_generadas_ciclo
         nonlocal tormenta_meteoritos_activa
@@ -299,6 +314,7 @@ def main():
         nonlocal posicion_boss_derrotado
         nonlocal tiempo_inicio_efecto_velocidad_luz_jugando
         nonlocal sincronizar_mouse_con_jugador
+        nonlocal frames_sincronizacion_mouse
 
         jugador = Player()
         balas = []
@@ -326,6 +342,11 @@ def main():
         allies_activo = False
         final_boss = None
         fase_boss_activa = False
+        entrada_boss_en_proceso = False
+        tiempo_inicio_entrada_boss = 0
+        punto_aparicion_boss = (ANCHO_PANTALLA // 2, 120)
+        boss_previsualizacion_entrada = None
+        enemigos_boss_explotados = False
 
         oleadas_generadas_ciclo = 0
         tormenta_meteoritos_activa = False
@@ -337,6 +358,7 @@ def main():
         posicion_boss_derrotado = (0, 0)
         tiempo_inicio_efecto_velocidad_luz_jugando = None
         sincronizar_mouse_con_jugador = False
+        frames_sincronizacion_mouse = 0
 
     def aplicar_danio_al_jugador(cantidad_danio, particulas_impacto=18):
         nonlocal energia, vidas, estado
@@ -487,6 +509,88 @@ def main():
                 )
 
         pantalla.blit(capa, (0, int(y)))
+
+    def dibujar_remolino_entrada_boss(tiempo_transcurrido):
+        if boss_previsualizacion_entrada is None:
+            return
+
+        progreso = min(1, tiempo_transcurrido / DURACION_REMOLINO_ENTRADA_BOSS_MS)
+        progreso_suave = suavizar_progreso_intro(progreso)
+
+        x_boss, y_boss = punto_aparicion_boss
+        imagen_base = boss_previsualizacion_entrada.imagen
+
+        escala = 0.08 + (0.92 * progreso_suave)
+        ancho = max(1, int(boss_previsualizacion_entrada.ancho * escala))
+        alto = max(1, int(boss_previsualizacion_entrada.alto * escala))
+
+        angulo = (1 - progreso_suave) * 540
+        radio_orbita = int((1 - progreso_suave) * 190)
+        fase = progreso * math.tau * 2.4
+        centro_x = x_boss + int(math.cos(fase) * radio_orbita)
+        centro_y = y_boss + int(math.sin(fase) * radio_orbita * 0.45)
+
+        imagen_escalada = pygame.transform.smoothscale(
+            imagen_base,
+            (ancho, alto)
+        )
+        imagen_rotada = pygame.transform.rotate(imagen_escalada, angulo)
+        imagen_rotada.set_alpha(int(255 * min(1, progreso * 1.35)))
+        rect = imagen_rotada.get_rect(center=(centro_x, centro_y))
+
+        capa = pygame.Surface((ANCHO_PANTALLA, ALTO_PANTALLA), pygame.SRCALPHA)
+
+        for indice in range(5):
+            radio = int((45 + indice * 26) * progreso_suave)
+            alpha = int((125 - indice * 18) * (1 - progreso * 0.45))
+
+            if radio > 0 and alpha > 0:
+                pygame.draw.circle(
+                    capa,
+                    (90, 220, 255, alpha),
+                    (int(x_boss), int(y_boss)),
+                    radio,
+                    2
+                )
+
+        for indice in range(18):
+            paso = indice / 18
+            angulo_particula = fase + paso * math.tau
+            radio_particula = int((1 - progreso_suave) * 210 + paso * 65)
+            x_particula = x_boss + int(math.cos(angulo_particula) * radio_particula)
+            y_particula = y_boss + int(math.sin(angulo_particula) * radio_particula * 0.45)
+
+            pygame.draw.circle(
+                capa,
+                (180, 80, 255, int(150 * (1 - paso) * (1 - progreso * 0.35))),
+                (x_particula, y_particula),
+                3
+            )
+
+        pantalla.blit(capa, (0, 0))
+        pantalla.blit(imagen_rotada, rect)
+
+    def aplicar_temblor_boss_si_activo():
+        if not entrada_boss_en_proceso:
+            return
+
+        tiempo_transcurrido = pygame.time.get_ticks() - tiempo_inicio_entrada_boss
+
+        if tiempo_transcurrido >= DURACION_TEMBLOR_ENTRADA_BOSS_MS:
+            return
+
+        progreso = tiempo_transcurrido / DURACION_TEMBLOR_ENTRADA_BOSS_MS
+        intensidad = int(INTENSIDAD_TEMBLOR_ENTRADA_BOSS * (1 - progreso))
+
+        if intensidad <= 0:
+            return
+
+        offset_x = random.randint(-intensidad, intensidad)
+        offset_y = random.randint(-intensidad, intensidad)
+        captura = pantalla.copy()
+
+        pantalla.fill(NEGRO)
+        pantalla.blit(captura, (offset_x, offset_y))
 
     def dibujar_intro_despegue():
         pantalla.fill(NEGRO)
@@ -694,10 +798,22 @@ def main():
         for aliado in aliados:
             aliado.dibujar(pantalla)
 
+        if entrada_boss_en_proceso:
+            tiempo_entrada_boss = (
+                pygame.time.get_ticks()
+                - tiempo_inicio_entrada_boss
+            )
+
+            if tiempo_entrada_boss >= DURACION_TEMBLOR_ENTRADA_BOSS_MS:
+                dibujar_remolino_entrada_boss(
+                    tiempo_entrada_boss - DURACION_TEMBLOR_ENTRADA_BOSS_MS
+                )
+
         if final_boss is not None:
             final_boss.dibujar(
                 pantalla,
-                mostrar_destruido=derrota_boss_en_proceso
+                mostrar_destruido=derrota_boss_en_proceso,
+                mostrar_barra=False
             )
 
         for explosion in explosiones:
@@ -707,6 +823,12 @@ def main():
             misil.dibujar(pantalla)
 
         jugador.dibujar(pantalla)
+
+        if (
+                final_boss is not None
+                and not final_boss.esta_destruido()
+        ):
+            final_boss.dibujar_barra_vida(pantalla)
 
         if tiempo_inicio_efecto_velocidad_luz_jugando is not None:
             tiempo_efecto = (
@@ -930,7 +1052,7 @@ def main():
                     meteoritos.append(nuevo_meteorito)
                     meteoritos_tormenta_generados += 1
 
-                if evento.type == EVENTO_CREAR_POWERUP:
+                if evento.type == EVENTO_CREAR_POWERUP and not fase_boss_activa:
                     tipo_powerup = random.choice(["scanner", "weapon", "allies"])
                     nuevo_powerup = PowerUp(tipo_powerup)
                     powerups.append(nuevo_powerup)
@@ -970,6 +1092,7 @@ def main():
                 if control_mouse:
                     pygame.mouse.set_pos((int(jugador.x), int(jugador.y)))
                     sincronizar_mouse_con_jugador = True
+                    frames_sincronizacion_mouse = 3
 
         if estado == ESTADO_JUGANDO:
             if tiempo_inicio_efecto_velocidad_luz_jugando is not None:
@@ -991,28 +1114,14 @@ def main():
                     and municion_weapon > 700
             ):
                 fase_boss_activa = True
-                final_boss = FinalBoss()
+                entrada_boss_en_proceso = True
+                tiempo_inicio_entrada_boss = pygame.time.get_ticks()
+                punto_aparicion_boss = (ANCHO_PANTALLA // 2, 120)
+                boss_previsualizacion_entrada = FinalBoss()
+                enemigos_boss_explotados = False
 
-                # El Final Boss destruye a las naves enemigas activas al aparecer
-                enemigos_visibles = [
-                    enemigo for enemigo in enemigos
-                    if enemigo.estado != "esperando" and not enemigo.finalizado
-                ]
-
-                for enemigo in enemigos_visibles:
-                    explosiones.append(
-                        Explosion(
-                            enemigo.x,
-                            enemigo.y,
-                            cantidad_particulas=24
-                        )
-                    )
-
-                if len(enemigos_visibles) > 0:
-                    sonidos.reproducir_explosion()
-
-                # Limpiar campo para iniciar fase Boss
-                enemigos = []
+                # Limpiar objetos de apoyo; las naves enemigas permanecen
+                # visibles hasta que termina el temblor.
                 meteoritos = []
                 balas_enemigas = []
                 powerups = []
@@ -1020,6 +1129,47 @@ def main():
                 # Cancelar tormenta si estaba activa
                 tormenta_meteoritos_activa = False
                 meteoritos_tormenta_generados = 0
+
+            if entrada_boss_en_proceso:
+                tiempo_entrada_boss = (
+                    pygame.time.get_ticks()
+                    - tiempo_inicio_entrada_boss
+                )
+                duracion_total_entrada_boss = (
+                    DURACION_TEMBLOR_ENTRADA_BOSS_MS
+                    + DURACION_REMOLINO_ENTRADA_BOSS_MS
+                )
+
+                if (
+                        tiempo_entrada_boss >= DURACION_TEMBLOR_ENTRADA_BOSS_MS
+                        and not enemigos_boss_explotados
+                ):
+                    enemigos_visibles = [
+                        enemigo for enemigo in enemigos
+                        if enemigo.estado != "esperando" and not enemigo.finalizado
+                    ]
+
+                    for enemigo in enemigos_visibles:
+                        explosiones.append(
+                            Explosion(
+                                enemigo.x,
+                                enemigo.y,
+                                cantidad_particulas=24
+                            )
+                        )
+
+                    if len(enemigos_visibles) > 0:
+                        sonidos.reproducir_explosion()
+
+                    enemigos = []
+                    enemigos_boss_explotados = True
+
+                if tiempo_entrada_boss >= duracion_total_entrada_boss:
+                    final_boss = boss_previsualizacion_entrada or FinalBoss()
+                    final_boss.x, final_boss.y = punto_aparicion_boss
+                    final_boss.rect.center = (final_boss.x, final_boss.y)
+                    boss_previsualizacion_entrada = None
+                    entrada_boss_en_proceso = False
 
             # Actualizar Final Boss
             if final_boss is not None:
@@ -1084,8 +1234,15 @@ def main():
 
 
             if control_mouse and sincronizar_mouse_con_jugador:
+                jugador.x = ANCHO_PANTALLA // 2
+                jugador.y = INTRO_JUGADOR_Y
+                jugador.rect.center = (jugador.x, jugador.y)
                 pygame.mouse.set_pos((int(jugador.x), int(jugador.y)))
-                sincronizar_mouse_con_jugador = False
+
+                frames_sincronizacion_mouse -= 1
+
+                if frames_sincronizacion_mouse <= 0:
+                    sincronizar_mouse_con_jugador = False
             elif control_mouse:
                 posicion_mouse = pygame.mouse.get_pos()
                 jugador.mover_con_mouse(posicion_mouse)
@@ -1330,6 +1487,7 @@ def main():
 
         elif estado == ESTADO_JUGANDO:
             dibujar_escena_juego()
+            aplicar_temblor_boss_si_activo()
 
         elif estado == ESTADO_PAUSA:
             dibujar_escena_juego()
@@ -1352,14 +1510,29 @@ def main():
             pantalla.fill(NEGRO)
 
             texto_victoria = fuente_grande.render("YOU WIN!", True, VERDE_CYBER)
-            texto_mensaje = fuente.render("Has derrotado al Final Boss", True, BLANCO)
+            texto_mensaje = fuente.render("Has derrotado al enemigo, Escaneaste sus VULNERABILIDADES y usaste tus HABILIDADES con TRABAJO EN EQUIPO; lo lograste!!!", True, BLANCO)
             texto_menu = fuente.render("Presiona ENTER para volver al menu inicial", True, BLANCO)
             texto_salir = fuente.render("Presiona ESC para salir", True, BLANCO)
 
-            pantalla.blit(texto_victoria, (250, 220))
-            pantalla.blit(texto_mensaje, (250, 300))
-            pantalla.blit(texto_menu, (190, 340))
-            pantalla.blit(texto_salir, (290, 380))
+            pantalla.blit(
+                texto_victoria,
+                texto_victoria.get_rect(center=(ANCHO_PANTALLA // 2, 250))
+            )
+
+            pantalla.blit(
+                texto_mensaje,
+                texto_mensaje.get_rect(center=(ANCHO_PANTALLA // 2, 330))
+            )
+
+            pantalla.blit(
+                texto_menu,
+                texto_menu.get_rect(center=(ANCHO_PANTALLA // 2, 380))
+            )
+
+            pantalla.blit(
+                texto_salir,
+                texto_salir.get_rect(center=(ANCHO_PANTALLA // 2, 420))
+            )
 
         pygame.display.flip()
         reloj.tick(FPS)

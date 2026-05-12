@@ -53,7 +53,7 @@ def dibujar_menu_inicio(pantalla, opcion_seleccionada):
 
     dibujar_texto_centrado(
         pantalla,
-        "Arcade retro de defensa digital",
+        "Arcade retro",
         fuente_subtitulo,
         AZUL_CYBER,
         200

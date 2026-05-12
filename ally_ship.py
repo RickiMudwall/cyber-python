@@ -17,8 +17,8 @@ class AllyShip:
         self.indice = indice
         self.total_aliados = total_aliados
 
-        self.ancho = 44
-        self.alto = 44
+        self.ancho = 95
+        self.alto = 95
 
         # Posición objetivo distribuida en la base de la ventana
         separacion = ANCHO_PANTALLA // (total_aliados + 1)

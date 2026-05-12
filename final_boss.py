@@ -15,8 +15,8 @@ from settings import (
 
 class FinalBoss:
     def __init__(self):
-        self.ancho = 160
-        self.alto = 120
+        self.ancho = 580
+        self.alto = 380
 
         self.x = ANCHO_PANTALLA // 2
         self.y = 120
@@ -109,7 +109,7 @@ class FinalBoss:
             self.derrotado = True
             self.ataque_masivo_activo = False
 
-    def dibujar(self, pantalla, mostrar_destruido=False):
+    def dibujar(self, pantalla, mostrar_destruido=False, mostrar_barra=True):
         if self.derrotado and not mostrar_destruido:
             return
 
@@ -122,7 +122,8 @@ class FinalBoss:
             if self.ataque_masivo_activo:
                 self.dibujar_ataque_masivo(pantalla)
 
-            self.dibujar_barra_vida(pantalla)
+            if mostrar_barra:
+                self.dibujar_barra_vida(pantalla)
 
     def dibujar_estado_escaneado(self, pantalla):
         # Aura visual indicando que el Boss fue escaneado
@@ -179,11 +180,17 @@ class FinalBoss:
         )
 
     def dibujar_barra_vida(self, pantalla):
-        ancho_barra = 220
-        alto_barra = 14
+        ancho_barra = 360
+        alto_barra = 18
 
         x_barra = self.x - ancho_barra // 2
-        y_barra = self.y - self.alto // 2 - 22
+        y_barra = max(24, self.rect.top + 18)
+
+        if x_barra < 20:
+            x_barra = 20
+
+        if x_barra + ancho_barra > ANCHO_PANTALLA - 20:
+            x_barra = ANCHO_PANTALLA - ancho_barra - 20
 
         porcentaje_vida = self.vida / self.vida_maxima
         ancho_vida = int(ancho_barra * porcentaje_vida)
@@ -210,7 +217,7 @@ class FinalBoss:
             border_radius=4
         )
 
-        fuente = pygame.font.SysFont(None, 22)
+        fuente = pygame.font.SysFont(None, 26)
 
         if self.ataque_masivo_activo:
             texto = fuente.render("ATAQUE MASIVO", True, ROJO_ALERTA)
@@ -219,7 +226,10 @@ class FinalBoss:
         else:
             texto = fuente.render("FINAL BOSS", True, BLANCO)
 
-        pantalla.blit(texto, (x_barra + 42, y_barra - 22))
+        texto_rect = texto.get_rect(
+            center=(x_barra + ancho_barra // 2, y_barra - 16)
+        )
+        pantalla.blit(texto, texto_rect)
 
     def esta_destruido(self):
         return self.derrotado or self.vida <= 0
