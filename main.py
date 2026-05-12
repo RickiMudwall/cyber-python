@@ -434,6 +434,17 @@ def main():
     def suavizar_progreso_intro(progreso):
         return progreso * progreso * (3 - 2 * progreso)
 
+    def posicion_mouse_valida_para_jugador(posicion_mouse):
+        mouse_x, mouse_y = posicion_mouse
+
+        if mouse_x <= 2 and mouse_y <= 2:
+            return (
+                jugador.x <= jugador.ancho // 2 + 2
+                and jugador.y <= jugador.alto // 2 + 2
+            )
+
+        return True
+
     def dibujar_efecto_velocidad_luz(y, intensidad=1.0, progreso=0.0):
         intensidad = max(0, min(1, intensidad))
         progreso = max(0, min(1, progreso))
@@ -1092,7 +1103,7 @@ def main():
                 if control_mouse:
                     pygame.mouse.set_pos((int(jugador.x), int(jugador.y)))
                     sincronizar_mouse_con_jugador = True
-                    frames_sincronizacion_mouse = 3
+                    frames_sincronizacion_mouse = 10
 
         if estado == ESTADO_JUGANDO:
             if tiempo_inicio_efecto_velocidad_luz_jugando is not None:
@@ -1120,9 +1131,8 @@ def main():
                 boss_previsualizacion_entrada = FinalBoss()
                 enemigos_boss_explotados = False
 
-                # Limpiar objetos de apoyo; las naves enemigas permanecen
-                # visibles hasta que termina el temblor.
-                meteoritos = []
+                # Limpiar objetos de apoyo; naves enemigas y meteoritos
+                # permanecen visibles hasta que termina el temblor.
                 balas_enemigas = []
                 powerups = []
 
@@ -1148,6 +1158,7 @@ def main():
                         enemigo for enemigo in enemigos
                         if enemigo.estado != "esperando" and not enemigo.finalizado
                     ]
+                    meteoritos_visibles = meteoritos[:]
 
                     for enemigo in enemigos_visibles:
                         explosiones.append(
@@ -1158,10 +1169,20 @@ def main():
                             )
                         )
 
-                    if len(enemigos_visibles) > 0:
+                    for meteorito in meteoritos_visibles:
+                        explosiones.append(
+                            Explosion(
+                                meteorito.x,
+                                meteorito.y,
+                                cantidad_particulas=28
+                            )
+                        )
+
+                    if len(enemigos_visibles) > 0 or len(meteoritos_visibles) > 0:
                         sonidos.reproducir_explosion()
 
                     enemigos = []
+                    meteoritos = []
                     enemigos_boss_explotados = True
 
                 if tiempo_entrada_boss >= duracion_total_entrada_boss:
@@ -1245,7 +1266,11 @@ def main():
                     sincronizar_mouse_con_jugador = False
             elif control_mouse:
                 posicion_mouse = pygame.mouse.get_pos()
-                jugador.mover_con_mouse(posicion_mouse)
+
+                if posicion_mouse_valida_para_jugador(posicion_mouse):
+                    jugador.mover_con_mouse(posicion_mouse)
+                else:
+                    pygame.mouse.set_pos((int(jugador.x), int(jugador.y)))
             else:
                 jugador.mover(teclas)
             botones_mouse = pygame.mouse.get_pressed()
@@ -1510,28 +1535,40 @@ def main():
             pantalla.fill(NEGRO)
 
             texto_victoria = fuente_grande.render("YOU WIN!", True, VERDE_CYBER)
-            texto_mensaje = fuente.render("Has derrotado al enemigo, Escaneaste sus VULNERABILIDADES y usaste tus HABILIDADES con TRABAJO EN EQUIPO; lo lograste!!!", True, BLANCO)
+            pantalla.blit(
+                texto_victoria,
+                texto_victoria.get_rect(center=(ANCHO_PANTALLA // 2, 220))
+            )
+
+            lineas_victoria = [
+                "Has derrotado al Final Boss",
+                "La Tierra ha sido defendida con exito",
+                "CyberHack vuelve a la base"
+            ]
+
+            y_inicial = 310
+            separacion = 36
+
+            for indice, linea in enumerate(lineas_victoria):
+                texto_linea = fuente.render(linea, True, BLANCO)
+                pantalla.blit(
+                    texto_linea,
+                    texto_linea.get_rect(
+                        center=(ANCHO_PANTALLA // 2, y_inicial + indice * separacion)
+                    )
+                )
+
             texto_menu = fuente.render("Presiona ENTER para volver al menu inicial", True, BLANCO)
             texto_salir = fuente.render("Presiona ESC para salir", True, BLANCO)
 
             pantalla.blit(
-                texto_victoria,
-                texto_victoria.get_rect(center=(ANCHO_PANTALLA // 2, 250))
-            )
-
-            pantalla.blit(
-                texto_mensaje,
-                texto_mensaje.get_rect(center=(ANCHO_PANTALLA // 2, 330))
-            )
-
-            pantalla.blit(
                 texto_menu,
-                texto_menu.get_rect(center=(ANCHO_PANTALLA // 2, 380))
+                texto_menu.get_rect(center=(ANCHO_PANTALLA // 2, 450))
             )
 
             pantalla.blit(
                 texto_salir,
-                texto_salir.get_rect(center=(ANCHO_PANTALLA // 2, 420))
+                texto_salir.get_rect(center=(ANCHO_PANTALLA // 2, 490))
             )
 
         pygame.display.flip()
