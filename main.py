@@ -629,7 +629,7 @@ def main():
         fondo_estrellas.actualizar()
         fondo_estrellas.dibujar(pantalla)
 
-        texto_titulo = fuente.render("Cyber Python - MVP 0.9", True, VERDE_CYBER)
+        texto_titulo = fuente.render("Cyber Python - MVP 1.5", True, VERDE_CYBER)
         texto_puntaje = fuente.render(f"Puntaje: {puntaje}", True, BLANCO)
         texto_vidas = fuente.render(f"Vidas: {vidas}", True, BLANCO)
         texto_energia = fuente.render(f"Energia: {energia}", True, BLANCO)
