@@ -1,4 +1,4 @@
-<html lang="en-us"><script src="{{cookiecutter.cdn}}pythons.js" type=module id="site" data-python="python{{cookiecutter.PYBUILD}}" data-LINES=42 data-COLUMNS=132 data-os="vtx,snd,gui" async defer>#<!--
+<html lang="en-us"><script src="{{cookiecutter.cdn}}browserfs.min.js"></script><script src="{{cookiecutter.cdn}}pythons.js" type=module id="site" data-python="python{{cookiecutter.PYBUILD}}" data-LINES=42 data-COLUMNS=132 data-os="snd,gui" async defer>#<!--
 
 print("""
 Loading {{cookiecutter.title}} from {{cookiecutter.archive}}.apk
@@ -63,7 +63,7 @@ async def custom_site():
     # before a gesture is recorded ( touch or click )
 
     # test/wait user media interaction
-    if not platform.window.MM.UME:
+    if False and not platform.window.MM.UME:
 
         # now that apk is mounted we have access to font cache
         # but we need to fill __file__ that is not yet set
@@ -144,15 +144,15 @@ asyncio.run( custom_site() )
 // this dict is available under PyConfig.config from __main__
 
 config = {
-    xtermjs : "{{cookiecutter.xtermjs}}" ,
+    xtermjs : "0" ,
     _sdl2 : "canvas",
     user_canvas : 0,
     user_canvas_managed : 0,
     gui_divider : 2,
-    ume_block : {{cookiecutter.ume_block}},
+    ume_block : 0,
     can_close : {{cookiecutter.can_close}},
     archive : "{{cookiecutter.archive}}",
-    gui_debug : 2,
+    gui_debug : 0,
     cdn : "{{cookiecutter.cdn}}",
     autorun : {{cookiecutter.autorun}},
     PYBUILD : "{{cookiecutter.PYBUILD}}",
@@ -283,8 +283,6 @@ function show_infobox() {
             console.warn("Service workers not supported")
 */
     </script>
-
-    <script src="{{cookiecutter.cdn}}/browserfs.min.js"></script>
 
 </head>
 
