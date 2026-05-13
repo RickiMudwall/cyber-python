@@ -31,8 +31,8 @@ class SoundManager:
         self.motor_boss = self.cargar_sonido_music_source("final_boss_engine_loop.mp3")
 
         # Volúmenes
-        self.sonido_disparo.set_volume(0.25)
-        self.sonido_impacto_bala.set_volume(0.35)
+        self.sonido_disparo.set_volume(0.30)
+        self.sonido_impacto_bala.set_volume(0.42)
         self.sonido_explosion.set_volume(0.35)
         self.sonido_danio.set_volume(0.35)
         self.sonido_game_over.set_volume(0.45)

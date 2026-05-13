@@ -1,7 +1,6 @@
 # player.py
 
 import os
-import math
 import pygame
 
 from settings import (
@@ -10,8 +9,6 @@ from settings import (
     ANCHO_JUGADOR,
     ALTO_JUGADOR,
     VELOCIDAD_JUGADOR,
-    VELOCIDAD_MAXIMA_MOUSE_JUGADOR,
-    UMBRAL_MOUSE_JUGADOR,
 )
 
 
@@ -232,24 +229,23 @@ class Player:
         x_anterior = self.x
         y_anterior = self.y
 
+        self.x, self.y = posicion_mouse
+
+        # Limitar movimiento dentro de la pantalla
         mitad_ancho = self.ancho // 2
         mitad_alto = self.alto // 2
 
-        objetivo_x, objetivo_y = posicion_mouse
-        objetivo_x = max(mitad_ancho, min(ANCHO_PANTALLA - mitad_ancho, objetivo_x))
-        objetivo_y = max(mitad_alto, min(ALTO_PANTALLA - mitad_alto, objetivo_y))
+        if self.x < mitad_ancho:
+            self.x = mitad_ancho
 
-        delta_objetivo_x = objetivo_x - self.x
-        delta_objetivo_y = objetivo_y - self.y
-        distancia_objetivo = math.hypot(delta_objetivo_x, delta_objetivo_y)
+        if self.x > ANCHO_PANTALLA - mitad_ancho:
+            self.x = ANCHO_PANTALLA - mitad_ancho
 
-        if distancia_objetivo <= UMBRAL_MOUSE_JUGADOR:
-            self.x = objetivo_x
-            self.y = objetivo_y
-        else:
-            paso = min(VELOCIDAD_MAXIMA_MOUSE_JUGADOR, distancia_objetivo)
-            self.x += (delta_objetivo_x / distancia_objetivo) * paso
-            self.y += (delta_objetivo_y / distancia_objetivo) * paso
+        if self.y < mitad_alto:
+            self.y = mitad_alto
+
+        if self.y > ALTO_PANTALLA - mitad_alto:
+            self.y = ALTO_PANTALLA - mitad_alto
 
         self.rect.center = (self.x, self.y)
         delta_x = self.x - x_anterior

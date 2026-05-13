@@ -7,10 +7,10 @@ El proyecto forma parte de mi portafolio técnico y muestra trabajo práctico co
 ## Estado Actual
 
 ```text
-MVP 1.7 - Ajustes de audio, movimiento suave y efectos cinemáticos
+MVP 1.7 - Ajustes de audio y efectos cinemáticos
 ```
 
-La versión actual incluye una intro cinemática de despegue con sprites por capas, efecto de viaje a velocidad luz, nave del jugador con inclinación lateral, propulsores animados, música por estado, ambientes en loop para motores y movimiento suavizado al controlar con mouse.
+La versión actual incluye una intro cinemática de despegue con sprites por capas, efecto de viaje a velocidad luz, nave del jugador con inclinación lateral, propulsores animados, música por estado y ambientes en loop para motores.
 
 ## Características
 
@@ -32,7 +32,6 @@ La versión actual incluye una intro cinemática de despegue con sprites por cap
 - Ambientes continuos para motor de nave del jugador y motor del Final Boss.
 - Motor WAV individual para naves enemigas pequeñas mientras están desplegadas.
 - Sonido WAV dedicado para los misiles disparados por el Final Boss.
-- Movimiento con mouse limitado por velocidad máxima para evitar saltos instantáneos.
 
 ## Intro Cinemática
 
@@ -67,15 +66,6 @@ La nave del jugador usa sprites dedicados para simular movimiento 3D lateral:
 - Propulsores animados según dirección de movimiento.
 - Seis propulsores principales alineados con la cola de la nave.
 - Retropropulsores y propulsores laterales generados por script.
-- Control con mouse suavizado: el cursor funciona como objetivo y la nave avanza hacia él con velocidad máxima configurable.
-
-Parámetros principales en `settings.py`:
-
-```text
-VELOCIDAD_JUGADOR = 5
-VELOCIDAD_MAXIMA_MOUSE_JUGADOR = 6
-UMBRAL_MOUSE_JUGADOR = 1.5
-```
 
 Assets de nave:
 
