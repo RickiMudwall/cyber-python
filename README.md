@@ -7,10 +7,10 @@ El proyecto forma parte de mi portafolio técnico y muestra trabajo práctico co
 ## Estado Actual
 
 ```text
-MVP 1.6 - Intro visual, nave animada, efectos cinemáticos y audio por estado
+MVP 1.7 - Ajustes de audio, movimiento suave y efectos cinemáticos
 ```
 
-La versión actual incluye una intro cinemática de despegue con sprites por capas, efecto de viaje a velocidad luz, nave del jugador con inclinación lateral, propulsores animados, música por estado y ambientes en loop para motores.
+La versión actual incluye una intro cinemática de despegue con sprites por capas, efecto de viaje a velocidad luz, nave del jugador con inclinación lateral, propulsores animados, música por estado, ambientes en loop para motores y movimiento suavizado al controlar con mouse.
 
 ## Características
 
@@ -30,6 +30,9 @@ La versión actual incluye una intro cinemática de despegue con sprites por cap
 - Sonidos generados localmente para disparos, daño, impactos, explosiones y Game Over.
 - Música MP3 separada para menú, intro, gameplay, pausa, Game Over, victoria y fase Boss.
 - Ambientes continuos para motor de nave del jugador y motor del Final Boss.
+- Motor WAV individual para naves enemigas pequeñas mientras están desplegadas.
+- Sonido WAV dedicado para los misiles disparados por el Final Boss.
+- Movimiento con mouse limitado por velocidad máxima para evitar saltos instantáneos.
 
 ## Intro Cinemática
 
@@ -64,6 +67,15 @@ La nave del jugador usa sprites dedicados para simular movimiento 3D lateral:
 - Propulsores animados según dirección de movimiento.
 - Seis propulsores principales alineados con la cola de la nave.
 - Retropropulsores y propulsores laterales generados por script.
+- Control con mouse suavizado: el cursor funciona como objetivo y la nave avanza hacia él con velocidad máxima configurable.
+
+Parámetros principales en `settings.py`:
+
+```text
+VELOCIDAD_JUGADOR = 5
+VELOCIDAD_MAXIMA_MOUSE_JUGADOR = 6
+UMBRAL_MOUSE_JUGADOR = 1.5
+```
 
 Assets de nave:
 
@@ -134,9 +146,11 @@ bullet_impact.wav
 explosion.wav
 player_damage.wav
 game_over.wav
+sound_motor_enemy_ship.wav
+boss_misil.wav
 ```
 
-El cambio de música se controla desde `sound_manager.py` según el estado del juego. Los loops de motor usan canales separados para que puedan sonar al mismo tiempo que la música de fondo.
+El cambio de música se controla desde `sound_manager.py` según el estado del juego. Los loops de motor usan canales separados para que puedan sonar al mismo tiempo que la música de fondo. Las naves enemigas pequeñas usan un pool de canales para reproducir su motor solo mientras están visibles, y el Final Boss reproduce `boss_misil.wav` cada vez que dispara un misil.
 
 ## Controles
 
@@ -190,7 +204,7 @@ ally_ship.py                Naves aliadas
 scanner_effect.py           Efecto visual del scanner
 explosion.py                Partículas de explosión
 starfield.py                Fondo de estrellas
-sound_manager.py            Carga y reproducción de sonidos
+sound_manager.py            Música, ambientes, efectos y canales de audio
 assets/sounds/source/music/ Música MP3 por estado y loops de motor
 dialog_sequence.py          Diálogos cinemáticos de intro
 ui.py                       Menús y textos de interfaz

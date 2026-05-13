@@ -1081,6 +1081,7 @@ def main():
                         jugador
                     )
                     boss_missiles.append(nuevo_misil)
+                    sonidos.reproducir_misil_boss()
 
         # =========================
         # ACTUALIZACIÓN DEL JUEGO
@@ -1510,6 +1511,11 @@ def main():
             final_boss_activo=(
                 final_boss is not None
                 and not final_boss.esta_destruido()
+            ),
+            enemigos_activos=sum(
+                1
+                for enemigo in enemigos
+                if enemigo.estado != "esperando" and not enemigo.finalizado
             )
         )
 
@@ -1550,9 +1556,9 @@ def main():
             )
 
             lineas_victoria = [
-                "Has derrotado al Final Boss",
-                "La Tierra ha sido defendida con exito",
-                "CyberHack vuelve a la base"
+                "Has derrotado al Enemigo!!",
+                "La Tierra ha sido defendida con exito!",
+                "Lección aprendida CyberHack: Usaste tus habilidades y con trabajo en Equipo lograste Vencer...no lo olvides"
             ]
 
             y_inicial = 310
