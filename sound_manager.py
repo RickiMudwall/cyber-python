@@ -1,6 +1,7 @@
 # sound_manager.py
 
 import os
+import sys
 import pygame
 
 
@@ -11,6 +12,7 @@ class SoundManager:
 
         self.ruta_sonidos = os.path.join("assets", "sounds")
         self.ruta_musica = os.path.join("assets", "sounds", "source", "music")
+        self.audio_web = sys.platform == "emscripten"
 
         self.sonido_disparo = self.cargar_sonido("player_shoot.wav")
         self.sonido_impacto_bala = self.cargar_sonido("bullet_impact.wav")
@@ -46,10 +48,16 @@ class SoundManager:
             self.motor_boss.set_volume(0.22)
 
     def cargar_sonido(self, nombre_archivo):
+        if self.audio_web:
+            nombre_archivo = self.obtener_nombre_audio_web(nombre_archivo)
+
         ruta = os.path.join(self.ruta_sonidos, nombre_archivo)
         return pygame.mixer.Sound(ruta)
 
     def cargar_sonido_music_source(self, nombre_archivo):
+        if self.audio_web:
+            nombre_archivo = self.obtener_nombre_audio_web(nombre_archivo)
+
         ruta = os.path.join(self.ruta_musica, nombre_archivo)
 
         if not os.path.exists(ruta):
@@ -61,12 +69,19 @@ class SoundManager:
             return None
 
     def obtener_ruta_musica(self, nombre_archivo):
+        if self.audio_web:
+            nombre_archivo = self.obtener_nombre_audio_web(nombre_archivo)
+
         ruta = os.path.join(self.ruta_musica, nombre_archivo)
 
         if not os.path.exists(ruta):
             return None
 
         return ruta
+
+    def obtener_nombre_audio_web(self, nombre_archivo):
+        nombre_base, _ = os.path.splitext(nombre_archivo)
+        return f"{nombre_base}.ogg"
 
     def reproducir_musica(self, nombre_archivo, volumen=0.45, repetir=-1):
         if self.musica_actual == nombre_archivo:

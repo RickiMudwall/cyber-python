@@ -1,5 +1,6 @@
 # main.py
 
+import asyncio
 import pygame
 import sys
 import random
@@ -89,12 +90,16 @@ from ui import dibujar_menu_inicio, dibujar_menu_pausa
 from power_bullet import PowerBullet
 
 
-def main():
+async def main():
     pygame.init()
+
+    flags_pantalla = pygame.SCALED
+    if sys.platform != "emscripten":
+        flags_pantalla |= pygame.FULLSCREEN
 
     pantalla = pygame.display.set_mode(
         (ANCHO_PANTALLA, ALTO_PANTALLA),
-        pygame.FULLSCREEN | pygame.SCALED
+        flags_pantalla
     )
     pygame.display.set_caption(TITULO_JUEGO)
 
@@ -1588,7 +1593,8 @@ def main():
 
         pygame.display.flip()
         reloj.tick(FPS)
+        await asyncio.sleep(0)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
