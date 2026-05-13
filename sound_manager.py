@@ -18,6 +18,7 @@ class SoundManager:
         self.ruta_sonidos = os.path.join("assets", "sounds")
         self.ruta_musica = os.path.join("assets", "sounds", "source", "music")
         self.audio_web = sys.platform == "emscripten"
+        self.motores_constantes_habilitados = not self.audio_web
         self.audio_disponible = self.inicializar_audio()
 
         self.sonido_disparo = self.cargar_sonido("player_shoot.wav")
@@ -148,6 +149,9 @@ class SoundManager:
         self.musica_actual = None
 
     def reproducir_motor_jugador(self):
+        if not self.motores_constantes_habilitados:
+            return
+
         if self.motor_jugador is None or self.canal_motor_jugador is None:
             return
 
@@ -159,6 +163,9 @@ class SoundManager:
             self.canal_motor_jugador.stop()
 
     def reproducir_motor_boss(self):
+        if not self.motores_constantes_habilitados:
+            return
+
         if self.motor_boss is None or self.canal_motor_boss is None:
             return
 
@@ -170,6 +177,10 @@ class SoundManager:
             self.canal_motor_boss.stop()
 
     def actualizar_motores_enemigos(self, cantidad_enemigos):
+        if not self.motores_constantes_habilitados:
+            self.detener_motores_enemigos()
+            return
+
         cantidad_activa = min(cantidad_enemigos, len(self.canales_motor_enemigos))
 
         for indice, canal in enumerate(self.canales_motor_enemigos):
