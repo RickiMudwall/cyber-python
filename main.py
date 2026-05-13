@@ -1,5 +1,6 @@
 # main.py
 
+import asyncio
 import pygame
 import sys
 import random
@@ -89,12 +90,16 @@ from ui import dibujar_menu_inicio, dibujar_menu_pausa
 from power_bullet import PowerBullet
 
 
-def main():
+async def main():
     pygame.init()
+
+    flags_pantalla = 0
+    if sys.platform != "emscripten":
+        flags_pantalla = pygame.FULLSCREEN | pygame.SCALED
 
     pantalla = pygame.display.set_mode(
         (ANCHO_PANTALLA, ALTO_PANTALLA),
-        pygame.FULLSCREEN | pygame.SCALED
+        flags_pantalla
     )
     pygame.display.set_caption(TITULO_JUEGO)
 
@@ -273,20 +278,11 @@ def main():
     energia = ENERGIA_INICIAL
     ultimo_disparo_ms = 0
 
-    EVENTO_CREAR_ENEMIGO = pygame.USEREVENT + 1
-    EVENTO_DISPARO_ENEMIGO = pygame.USEREVENT + 2
-    EVENTO_CREAR_METEORITO = pygame.USEREVENT + 3
-    EVENTO_CREAR_POWERUP = pygame.USEREVENT + 4
-    EVENTO_DISPARO_BOSS = pygame.USEREVENT + 5
-
-    pygame.time.set_timer(EVENTO_CREAR_ENEMIGO, INTERVALO_OLEADAS_MS)
-    pygame.time.set_timer(EVENTO_DISPARO_ENEMIGO, 900)
-    pygame.time.set_timer(EVENTO_CREAR_METEORITO, INTERVALO_METEORITOS_TORMENTA_MS)
-    pygame.time.set_timer(EVENTO_CREAR_POWERUP, 3000)
-    pygame.time.set_timer(EVENTO_DISPARO_BOSS, 1700)
-
-
-
+    ultimo_evento_crear_enemigo = pygame.time.get_ticks()
+    ultimo_evento_disparo_enemigo = pygame.time.get_ticks()
+    ultimo_evento_crear_meteorito = pygame.time.get_ticks()
+    ultimo_evento_crear_powerup = pygame.time.get_ticks()
+    ultimo_evento_disparo_boss = pygame.time.get_ticks()
 
     def reiniciar_partida():
         nonlocal jugador, balas, enemigos, balas_enemigas, meteoritos
@@ -315,6 +311,11 @@ def main():
         nonlocal tiempo_inicio_efecto_velocidad_luz_jugando
         nonlocal sincronizar_mouse_con_jugador
         nonlocal frames_sincronizacion_mouse
+        nonlocal ultimo_evento_crear_enemigo
+        nonlocal ultimo_evento_disparo_enemigo
+        nonlocal ultimo_evento_crear_meteorito
+        nonlocal ultimo_evento_crear_powerup
+        nonlocal ultimo_evento_disparo_boss
 
         jugador = Player()
         balas = []
@@ -359,6 +360,12 @@ def main():
         tiempo_inicio_efecto_velocidad_luz_jugando = None
         sincronizar_mouse_con_jugador = False
         frames_sincronizacion_mouse = 0
+        tiempo_reinicio = pygame.time.get_ticks()
+        ultimo_evento_crear_enemigo = tiempo_reinicio
+        ultimo_evento_disparo_enemigo = tiempo_reinicio
+        ultimo_evento_crear_meteorito = tiempo_reinicio
+        ultimo_evento_crear_powerup = tiempo_reinicio
+        ultimo_evento_disparo_boss = tiempo_reinicio
 
     def aplicar_danio_al_jugador(cantidad_danio, particulas_impacto=18):
         nonlocal energia, vidas, estado
@@ -1023,65 +1030,78 @@ def main():
                         pygame.quit()
                         sys.exit()
 
-            # Eventos automáticos solo mientras se juega
-            if estado == ESTADO_JUGANDO:
-                if (
-                        evento.type == EVENTO_CREAR_ENEMIGO
-                        and not fase_boss_activa
-                        and not tormenta_meteoritos_activa
-                        and oleadas_generadas_ciclo < OLEADAS_ANTES_TORMENTA_METEORITOS
-                ):
-                    nueva_oleada = EnemyWave(jugador)
-                    enemigos.extend(nueva_oleada.obtener_enemigos())
-                    oleadas_generadas_ciclo += 1
+        # Eventos automáticos sin pygame.time.set_timer, compatible con pygbag/WASM.
+        if estado == ESTADO_JUGANDO:
+            tiempo_actual_eventos = pygame.time.get_ticks()
 
-                if evento.type == EVENTO_DISPARO_ENEMIGO and not fase_boss_activa:
-                    enemigos_visibles = [
-                        enemigo for enemigo in enemigos
-                        if enemigo.estado != "esperando" and not enemigo.finalizado
-                    ]
+            if (
+                    tiempo_actual_eventos - ultimo_evento_crear_enemigo >= INTERVALO_OLEADAS_MS
+                    and not fase_boss_activa
+                    and not tormenta_meteoritos_activa
+                    and oleadas_generadas_ciclo < OLEADAS_ANTES_TORMENTA_METEORITOS
+            ):
+                ultimo_evento_crear_enemigo = tiempo_actual_eventos
+                nueva_oleada = EnemyWave(jugador)
+                enemigos.extend(nueva_oleada.obtener_enemigos())
+                oleadas_generadas_ciclo += 1
 
-                    if len(enemigos_visibles) > 0:
-                        enemigo_que_dispara = random.choice(enemigos_visibles)
-                        tipo_amenaza = random.choice(["malware", "bug", "alert"])
+            if (
+                    tiempo_actual_eventos - ultimo_evento_disparo_enemigo >= 900
+                    and not fase_boss_activa
+            ):
+                ultimo_evento_disparo_enemigo = tiempo_actual_eventos
+                enemigos_visibles = [
+                    enemigo for enemigo in enemigos
+                    if enemigo.estado != "esperando" and not enemigo.finalizado
+                ]
 
-                        nueva_bala_enemiga = EnemyBullet(
-                            enemigo_que_dispara.x,
-                            enemigo_que_dispara.y + enemigo_que_dispara.alto // 2,
-                            tipo_amenaza
-                        )
+                if len(enemigos_visibles) > 0:
+                    enemigo_que_dispara = random.choice(enemigos_visibles)
+                    tipo_amenaza = random.choice(["malware", "bug", "alert"])
 
-                        balas_enemigas.append(nueva_bala_enemiga)
-
-                if (
-                        evento.type == EVENTO_CREAR_METEORITO
-                        and not fase_boss_activa
-                        and tormenta_meteoritos_activa
-                        and meteoritos_tormenta_generados < TOTAL_METEORITOS_TORMENTA
-                ):
-                    nuevo_meteorito = Meteor()
-                    meteoritos.append(nuevo_meteorito)
-                    meteoritos_tormenta_generados += 1
-
-                if evento.type == EVENTO_CREAR_POWERUP and not fase_boss_activa:
-                    tipo_powerup = random.choice(["scanner", "weapon", "allies"])
-                    nuevo_powerup = PowerUp(tipo_powerup)
-                    powerups.append(nuevo_powerup)
-
-                if (
-                        evento.type == EVENTO_DISPARO_BOSS
-                        and fase_boss_activa
-                        and final_boss is not None
-                        and not final_boss.esta_destruido()
-                        and not derrota_boss_en_proceso
-                ):
-                    nuevo_misil = BossMissile(
-                        final_boss.x,
-                        final_boss.y + final_boss.alto // 2,
-                        jugador
+                    nueva_bala_enemiga = EnemyBullet(
+                        enemigo_que_dispara.x,
+                        enemigo_que_dispara.y + enemigo_que_dispara.alto // 2,
+                        tipo_amenaza
                     )
-                    boss_missiles.append(nuevo_misil)
-                    sonidos.reproducir_misil_boss()
+
+                    balas_enemigas.append(nueva_bala_enemiga)
+
+            if (
+                    tiempo_actual_eventos - ultimo_evento_crear_meteorito >= INTERVALO_METEORITOS_TORMENTA_MS
+                    and not fase_boss_activa
+                    and tormenta_meteoritos_activa
+                    and meteoritos_tormenta_generados < TOTAL_METEORITOS_TORMENTA
+            ):
+                ultimo_evento_crear_meteorito = tiempo_actual_eventos
+                nuevo_meteorito = Meteor()
+                meteoritos.append(nuevo_meteorito)
+                meteoritos_tormenta_generados += 1
+
+            if (
+                    tiempo_actual_eventos - ultimo_evento_crear_powerup >= 3000
+                    and not fase_boss_activa
+            ):
+                ultimo_evento_crear_powerup = tiempo_actual_eventos
+                tipo_powerup = random.choice(["scanner", "weapon", "allies"])
+                nuevo_powerup = PowerUp(tipo_powerup)
+                powerups.append(nuevo_powerup)
+
+            if (
+                    tiempo_actual_eventos - ultimo_evento_disparo_boss >= 1700
+                    and fase_boss_activa
+                    and final_boss is not None
+                    and not final_boss.esta_destruido()
+                    and not derrota_boss_en_proceso
+            ):
+                ultimo_evento_disparo_boss = tiempo_actual_eventos
+                nuevo_misil = BossMissile(
+                    final_boss.x,
+                    final_boss.y + final_boss.alto // 2,
+                    jugador
+                )
+                boss_missiles.append(nuevo_misil)
+                sonidos.reproducir_misil_boss()
 
         # =========================
         # ACTUALIZACIÓN DEL JUEGO
@@ -1588,7 +1608,8 @@ def main():
 
         pygame.display.flip()
         reloj.tick(FPS)
+        await asyncio.sleep(0)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
