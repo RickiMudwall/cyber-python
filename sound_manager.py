@@ -5,14 +5,20 @@ import sys
 import pygame
 
 
+class SonidoNulo:
+    def set_volume(self, volumen):
+        pass
+
+    def play(self, *args, **kwargs):
+        pass
+
+
 class SoundManager:
     def __init__(self):
-        pygame.mixer.init()
-        pygame.mixer.set_num_channels(32)
-
         self.ruta_sonidos = os.path.join("assets", "sounds")
         self.ruta_musica = os.path.join("assets", "sounds", "source", "music")
         self.audio_web = sys.platform == "emscripten"
+        self.audio_disponible = self.inicializar_audio()
 
         self.sonido_disparo = self.cargar_sonido("player_shoot.wav")
         self.sonido_impacto_bala = self.cargar_sonido("bullet_impact.wav")
@@ -23,12 +29,9 @@ class SoundManager:
         self.sonido_misil_boss = self.cargar_sonido("boss_misil.wav")
 
         self.musica_actual = None
-        self.canal_motor_jugador = pygame.mixer.Channel(8)
-        self.canal_motor_boss = pygame.mixer.Channel(9)
-        self.canales_motor_enemigos = [
-            pygame.mixer.Channel(indice)
-            for indice in range(10, 26)
-        ]
+        self.canal_motor_jugador = self.crear_canal(8)
+        self.canal_motor_boss = self.crear_canal(9)
+        self.canales_motor_enemigos = [self.crear_canal(indice) for indice in range(10, 26)]
         self.motor_jugador = self.cargar_sonido_music_source("ship_engine_loop.mp3")
         self.motor_boss = self.cargar_sonido_music_source("final_boss_engine_loop.mp3")
 
@@ -47,14 +50,43 @@ class SoundManager:
         if self.motor_boss is not None:
             self.motor_boss.set_volume(0.22)
 
+    def inicializar_audio(self):
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+
+            pygame.mixer.set_num_channels(32)
+            return True
+        except pygame.error:
+            return False
+
+    def crear_canal(self, indice):
+        if not self.audio_disponible:
+            return None
+
+        try:
+            return pygame.mixer.Channel(indice)
+        except pygame.error:
+            return None
+
     def cargar_sonido(self, nombre_archivo):
+        if not self.audio_disponible:
+            return SonidoNulo()
+
         if self.audio_web:
             nombre_archivo = self.obtener_nombre_audio_web(nombre_archivo)
 
         ruta = os.path.join(self.ruta_sonidos, nombre_archivo)
-        return pygame.mixer.Sound(ruta)
+
+        try:
+            return pygame.mixer.Sound(ruta)
+        except pygame.error:
+            return SonidoNulo()
 
     def cargar_sonido_music_source(self, nombre_archivo):
+        if not self.audio_disponible:
+            return None
+
         if self.audio_web:
             nombre_archivo = self.obtener_nombre_audio_web(nombre_archivo)
 
@@ -84,13 +116,16 @@ class SoundManager:
         return f"{nombre_base}.ogg"
 
     def reproducir_musica(self, nombre_archivo, volumen=0.45, repetir=-1):
+        if not self.audio_disponible:
+            return
+
         if self.musica_actual == nombre_archivo:
             return
 
         ruta = self.obtener_ruta_musica(nombre_archivo)
 
         if ruta is None:
-            pygame.mixer.music.stop()
+            self.detener_musica()
             self.musica_actual = None
             return
 
@@ -100,37 +135,47 @@ class SoundManager:
             pygame.mixer.music.play(repetir)
             self.musica_actual = nombre_archivo
         except pygame.error:
-            pygame.mixer.music.stop()
+            self.detener_musica()
             self.musica_actual = None
 
     def detener_musica(self):
-        pygame.mixer.music.stop()
+        if self.audio_disponible:
+            try:
+                pygame.mixer.music.stop()
+            except pygame.error:
+                pass
+
         self.musica_actual = None
 
     def reproducir_motor_jugador(self):
-        if self.motor_jugador is None:
+        if self.motor_jugador is None or self.canal_motor_jugador is None:
             return
 
         if not self.canal_motor_jugador.get_busy():
             self.canal_motor_jugador.play(self.motor_jugador, loops=-1)
 
     def detener_motor_jugador(self):
-        self.canal_motor_jugador.stop()
+        if self.canal_motor_jugador is not None:
+            self.canal_motor_jugador.stop()
 
     def reproducir_motor_boss(self):
-        if self.motor_boss is None:
+        if self.motor_boss is None or self.canal_motor_boss is None:
             return
 
         if not self.canal_motor_boss.get_busy():
             self.canal_motor_boss.play(self.motor_boss, loops=-1)
 
     def detener_motor_boss(self):
-        self.canal_motor_boss.stop()
+        if self.canal_motor_boss is not None:
+            self.canal_motor_boss.stop()
 
     def actualizar_motores_enemigos(self, cantidad_enemigos):
         cantidad_activa = min(cantidad_enemigos, len(self.canales_motor_enemigos))
 
         for indice, canal in enumerate(self.canales_motor_enemigos):
+            if canal is None:
+                continue
+
             if indice < cantidad_activa:
                 if not canal.get_busy():
                     canal.play(self.sonido_motor_enemigo, loops=-1)
@@ -139,7 +184,8 @@ class SoundManager:
 
     def detener_motores_enemigos(self):
         for canal in self.canales_motor_enemigos:
-            canal.stop()
+            if canal is not None:
+                canal.stop()
 
     def actualizar_audio_estado(
         self,

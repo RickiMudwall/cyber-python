@@ -93,9 +93,9 @@ from power_bullet import PowerBullet
 async def main():
     pygame.init()
 
-    flags_pantalla = pygame.SCALED
+    flags_pantalla = 0
     if sys.platform != "emscripten":
-        flags_pantalla |= pygame.FULLSCREEN
+        flags_pantalla = pygame.FULLSCREEN | pygame.SCALED
 
     pantalla = pygame.display.set_mode(
         (ANCHO_PANTALLA, ALTO_PANTALLA),
