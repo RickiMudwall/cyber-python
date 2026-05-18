@@ -8,7 +8,7 @@ import pygame
 class SonidoNulo:
     """Representa un sonido inactivo cuando el audio no está disponible."""
 
-    def set_volume(self, volumen):
+    def set_volume(self, _volumen):
         # No realiza acción: mantiene la misma interfaz que pygame.mixer.Sound.
         return None
 
