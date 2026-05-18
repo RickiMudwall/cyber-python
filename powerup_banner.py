@@ -9,6 +9,9 @@ from settings import (
     POWERUP_BANNER_RUTA_BASE,
     POWERUP_BANNER_ANCHO,
     POWERUP_BANNER_ALTO,
+    POWERUP_BANNER_MAX_ANCHO,
+    POWERUP_BANNER_MAX_ALTO,
+    POWERUP_BANNER_MARGEN_INFERIOR,
     POWERUP_BANNER_SLIDE_MS,
     POWERUP_BANNER_HOLD_MS,
     AZUL_CYBER,
@@ -27,6 +30,7 @@ class PowerUpBanner:
             + POWERUP_BANNER_SLIDE_MS
         )
         self.imagen = self.cargar_imagen()
+        self.rect_base = self.imagen.get_rect()
 
     def obtener_nombre_imagen(self):
         return f"powerup_banner_{self.tipo}.png"
@@ -39,12 +43,22 @@ class PowerUpBanner:
 
         if os.path.exists(ruta):
             imagen = pygame.image.load(ruta).convert_alpha()
-            return pygame.transform.smoothscale(
-                imagen,
-                (POWERUP_BANNER_ANCHO, POWERUP_BANNER_ALTO)
-            )
+            return self.escalar_proporcional(imagen)
 
         return self.crear_imagen_temporal()
+
+    def escalar_proporcional(self, imagen):
+        ancho_original, alto_original = imagen.get_size()
+        escala = min(
+            POWERUP_BANNER_MAX_ANCHO / ancho_original,
+            POWERUP_BANNER_MAX_ALTO / alto_original,
+            1
+        )
+
+        ancho = max(1, int(ancho_original * escala))
+        alto = max(1, int(alto_original * escala))
+
+        return pygame.transform.smoothscale(imagen, (ancho, alto))
 
     def obtener_textos(self):
         if self.tipo == "scanner":
@@ -106,14 +120,19 @@ class PowerUpBanner:
     def suavizar_movimiento(self, progreso):
         return progreso * progreso * (3 - 2 * progreso)
 
-    def obtener_alpha_y_escala(self, tiempo_local):
+    def obtener_x_y_alpha(self, tiempo_local, ancho, alto):
+        x_fuera = -ancho - 60
+        x_destino = (ANCHO_PANTALLA - ancho) // 2
+        y_destino = ALTO_PANTALLA - alto - POWERUP_BANNER_MARGEN_INFERIOR
+
         if tiempo_local <= POWERUP_BANNER_SLIDE_MS:
             progreso = tiempo_local / POWERUP_BANNER_SLIDE_MS
             progreso = self.suavizar_movimiento(progreso)
-            return int(255 * progreso), 0.88 + 0.12 * progreso
+            x = x_fuera + (x_destino - x_fuera) * progreso
+            return int(x), int(y_destino), int(255 * progreso)
 
         if tiempo_local <= POWERUP_BANNER_SLIDE_MS + POWERUP_BANNER_HOLD_MS:
-            return 255, 1.0
+            return int(x_destino), int(y_destino), 255
 
         tiempo_salida = (
             tiempo_local
@@ -122,8 +141,9 @@ class PowerUpBanner:
         )
         progreso = tiempo_salida / POWERUP_BANNER_SLIDE_MS
         progreso = self.suavizar_movimiento(progreso)
+        x = x_destino + (x_fuera - x_destino) * progreso
 
-        return int(255 * (1 - progreso)), 1.0 - 0.08 * progreso
+        return int(x), int(y_destino), int(255 * (1 - progreso))
 
     def finalizado(self):
         tiempo_local = pygame.time.get_ticks() - self.tiempo_inicio
@@ -131,12 +151,9 @@ class PowerUpBanner:
 
     def dibujar(self, pantalla):
         tiempo_local = pygame.time.get_ticks() - self.tiempo_inicio
-        alpha, escala = self.obtener_alpha_y_escala(tiempo_local)
-
-        ancho = max(1, int(POWERUP_BANNER_ANCHO * escala))
-        alto = max(1, int(POWERUP_BANNER_ALTO * escala))
-        imagen = pygame.transform.smoothscale(self.imagen, (ancho, alto))
+        ancho, alto = self.rect_base.size
+        x, y, alpha = self.obtener_x_y_alpha(tiempo_local, ancho, alto)
+        imagen = self.imagen.copy()
         imagen.set_alpha(alpha)
 
-        rect = imagen.get_rect(center=(ANCHO_PANTALLA // 2, ALTO_PANTALLA // 2))
-        pantalla.blit(imagen, rect)
+        pantalla.blit(imagen, (x, y))
