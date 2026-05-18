@@ -11,6 +11,7 @@ from ally_ship import AllyShip
 from final_boss import FinalBoss
 from boss_missile import BossMissile
 from dialog_sequence import DialogSequence
+from powerup_banner import PowerUpBanner
 
 from scanner_effect import ScannerEffect
 
@@ -242,6 +243,7 @@ async def main():
     explosiones = []
 
     powerups = []
+    powerup_banners = []
     scanner_effects = []
     aliados = []
     boss_missiles = []
@@ -287,6 +289,7 @@ async def main():
         nonlocal jugador, balas, enemigos, balas_enemigas, meteoritos
         nonlocal explosiones, puntaje, vidas, energia
         nonlocal powerups
+        nonlocal powerup_banners
         nonlocal tiene_scanner, tiene_allies, municion_weapon
         nonlocal scanner_activo, weapon_activo, allies_activo
         nonlocal scanner_effects
@@ -323,6 +326,7 @@ async def main():
         meteoritos = []
         explosiones = []
         powerups = []
+        powerup_banners = []
         scanner_effects = []
         aliados = []
         boss_missiles = []
@@ -433,6 +437,11 @@ async def main():
 
             ultimo_disparo_ms = tiempo_actual
             sonidos.reproducir_disparo()
+
+    def mostrar_feedback_powerup(tipo):
+        powerup_banners.clear()
+        powerup_banners.append(PowerUpBanner(tipo))
+        sonidos.reproducir_powerup()
 
     def dibujar_dialogos_intro(tiempo_transcurrido):
         dialogos_intro.dibujar(pantalla, tiempo_transcurrido)
@@ -872,6 +881,9 @@ async def main():
                 progreso_efecto
             )
 
+        for powerup_banner in powerup_banners:
+            powerup_banner.dibujar(pantalla)
+
     while True:
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
@@ -927,6 +939,7 @@ async def main():
                         tiene_scanner = False
 
                         scanner_activo = True
+                        mostrar_feedback_powerup("scanner")
 
                         scanner_effects = [
                             ScannerEffect(jugador.x, jugador.y)
@@ -940,9 +953,13 @@ async def main():
                         # El arma poderosa se activa/desactiva solo por decisión del jugador
                         weapon_activo = not weapon_activo
 
+                        if weapon_activo:
+                            mostrar_feedback_powerup("weapon")
+
                     elif evento.key == pygame.K_3 and tiene_allies:
                         # Aliados es de un solo uso: se consume al activarlo
                         tiene_allies = False
+                        mostrar_feedback_powerup("allies")
 
                         # Si el arma poderosa está activa y hay más de 500 municiones,
                         # las naves aliadas heredan el disparo poderoso.
@@ -1338,6 +1355,10 @@ async def main():
 
                 if powerup.esta_fuera_de_pantalla():
                     powerups.remove(powerup)
+
+            for powerup_banner in powerup_banners[:]:
+                if powerup_banner.finalizado():
+                    powerup_banners.remove(powerup_banner)
 
             for explosion in explosiones[:]:
                 explosion.actualizar()

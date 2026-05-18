@@ -32,6 +32,7 @@ class SoundManager:
         self.sonido_game_over = self.cargar_sonido("game_over.wav")
         self.sonido_motor_enemigo = self.cargar_sonido("sound_motor_enemy_ship.wav")
         self.sonido_misil_boss = self.cargar_sonido("boss_misil.wav")
+        self.sonido_powerup = self.cargar_sonido("powerup_activate.wav")
 
         self.musica_actual = None
         self.canal_motor_jugador = self.crear_canal(8)
@@ -48,6 +49,7 @@ class SoundManager:
         self.sonido_game_over.set_volume(0.45)
         self.sonido_motor_enemigo.set_volume(0.12)
         self.sonido_misil_boss.set_volume(0.45)
+        self.sonido_powerup.set_volume(0.55)
 
         if self.motor_jugador is not None:
             self.motor_jugador.set_volume(0.18)
@@ -78,10 +80,15 @@ class SoundManager:
         if not self.audio_disponible:
             return SonidoNulo()
 
+        nombre_original = nombre_archivo
+
         if self.audio_web:
             nombre_archivo = self.obtener_nombre_audio_web(nombre_archivo)
 
         ruta = os.path.join(self.ruta_sonidos, nombre_archivo)
+
+        if self.audio_web and not os.path.exists(ruta):
+            ruta = os.path.join(self.ruta_sonidos, nombre_original)
 
         try:
             return pygame.mixer.Sound(ruta)
@@ -271,3 +278,6 @@ class SoundManager:
 
     def reproducir_misil_boss(self):
         self.sonido_misil_boss.play()
+
+    def reproducir_powerup(self):
+        self.sonido_powerup.play()
