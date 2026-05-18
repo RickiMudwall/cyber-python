@@ -265,7 +265,6 @@ async def main():
 
 
     tiene_scanner = False
-    tiene_weapon = False
     tiene_allies = False
 
     scanner_activo = False
